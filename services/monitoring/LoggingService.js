@@ -104,7 +104,14 @@ class LoggingService {
     }
 
     logDebug(message, data = {}) {
-        this.debugLogger.debug(message, data);
+        const logData = {
+            level: 'debug',
+            message: message.replace(/(\r\n|\n|\r)/gm, '').replace(/\s+/g, ' '),
+            ...data,
+            timestamp: new Date().toISOString()
+        };
+
+        this.debugLogger.info(logData);
     }
 
     _sanitizeBody(body) {

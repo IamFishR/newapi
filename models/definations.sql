@@ -266,9 +266,14 @@ CREATE TABLE preferences (
 -- User sessions
 CREATE TABLE sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT,
-    session_token VARCHAR(100),
-    expiry DATETIME,
+    user_id INT NOT NULL,
+    session_token VARCHAR(500) NOT NULL UNIQUE, -- Increased from 100 to 500
+    expiry DATETIME NOT NULL,
+    device_info JSON,
+    last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ip_address VARCHAR(45),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 

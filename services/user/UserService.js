@@ -174,6 +174,18 @@ class UserService {
             transaction.price
         );
     }
+
+    // Admin Operations
+    async getAllUsers() {
+        return await User.findAll();
+    }
+
+
+    async getUserById(userId) {
+        const user = await User.findByPk(userId);
+        if (!user) throw new Error('User not found');
+        return user;
+    }
 }
 
 module.exports = new UserService();

@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { apiLimiter, authLimiter, syncLimiter } = require('../middleware/rateLimiter');
+const { apiLimiter, authLimiter } = require('../middleware/rateLimiter');
 const UserService = require('../services/user/UserService');
 const RoleService = require('../services/user/RoleService');
 const PreferenceService = require('../services/user/PreferenceService');
 const ValidationService = require('../utils/ValidationService');
+const LoggingService = require('../services/monitoring/LoggingService');
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -63,11 +64,16 @@ router.post('/authenticate', authLimiter, async (req, res, next) => {
 
 router.post('/signout', auth.isAuthenticated, async (req, res) => {
     try {
-        const token = req.cookies.session_token;
+        const token = (req.cookies.session_token || '').trim();
+        if (!token) {
+            return res.status(400).json({ error: 'No session token provided' });
+        }
+        LoggingService.logDebug('User signing out', { token });
         await UserService.logoutUser(token);
         res.clearCookie('session_token');
         res.json({ message: 'Sign out successful' });
     } catch (error) {
+        LoggingService.logError(error, { context: 'Sign out operation' });
         res.status(500).json({ error: error.message });
     }
 });
@@ -76,7 +82,6 @@ router.post('/signout', auth.isAuthenticated, async (req, res) => {
 router.get('/profile', auth.isAuthenticated, async (req, res) => {
     try {
         const user = await UserService.getUser(req.user.id);
-        await SyncService.verifyDataIntegrity(req.user.id);
         res.json(user);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -87,7 +92,6 @@ router.put('/profile', auth.isAuthenticated, async (req, res, next) => {
     try {
         const validatedData = await ValidationService.validate('userPreferences', req.body);
         const updated = await UserService.updateUserProfile(req.user.id, validatedData);
-        await SyncService.syncUserData(updated);
         res.json(updated);
     } catch (error) {
         next(error);
@@ -108,7 +112,6 @@ router.put('/preferences', auth.isAuthenticated, async (req, res, next) => {
     try {
         const validatedData = await ValidationService.validate('userPreferences', req.body);
         const preferences = await PreferenceService.createOrUpdatePreferences(req.user.id, validatedData);
-        await SyncService.syncUserData({ ...preferences });
         res.json(preferences);
     } catch (error) {
         next(error);
@@ -132,17 +135,6 @@ router.put('/:userId/role', auth.isAuthenticated, auth.hasRole('admin'), async (
         res.json({ message: 'Role updated successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
-    }
-});
-
-// Apply sync rate limiter to sync operations
-router.post('/sync', auth.isAuthenticated, syncLimiter, async (req, res) => {
-    try {
-        await SyncService.processOfflineQueue();
-        await SyncService.validateAndResyncAllData(req.user.id);
-        res.json({ message: 'Sync completed successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
     }
 });
 

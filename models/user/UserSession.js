@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
             }
         },
         session_token: {
-            type: DataTypes.STRING(100),
+            type: DataTypes.STRING(500), // Increased from 100 to 500
             allowNull: false,
             unique: true
         },
