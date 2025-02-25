@@ -176,6 +176,87 @@ const schemas = {
     })
 };
 
+const taskManagementSchemas = {
+    project: {
+        type: 'object',
+        required: ['name', 'code'],
+        properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            code: { type: 'string', minLength: 1, maxLength: 10 },
+            description: { type: 'string' },
+            start_date: { type: 'string', format: 'date' },
+            end_date: { type: 'string', format: 'date' },
+            status: { type: 'string', enum: ['active', 'completed', 'on_hold', 'cancelled'] }
+        }
+    },
+    projectUpdate: {
+        type: 'object',
+        properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            code: { type: 'string', minLength: 1, maxLength: 10 },
+            description: { type: 'string' },
+            start_date: { type: 'string', format: 'date' },
+            end_date: { type: 'string', format: 'date' },
+            status: { type: 'string', enum: ['active', 'completed', 'on_hold', 'cancelled'] }
+        }
+    },
+    sprint: {
+        type: 'object',
+        required: ['name', 'project_id'],
+        properties: {
+            project_id: { type: 'integer' },
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            goal: { type: 'string' },
+            start_date: { type: 'string', format: 'date' },
+            end_date: { type: 'string', format: 'date' },
+            status: { type: 'string', enum: ['planned', 'active', 'completed', 'cancelled'] }
+        }
+    },
+    sprintUpdate: {
+        type: 'object',
+        properties: {
+            name: { type: 'string', minLength: 1, maxLength: 100 },
+            goal: { type: 'string' },
+            start_date: { type: 'string', format: 'date' },
+            end_date: { type: 'string', format: 'date' },
+            status: { type: 'string', enum: ['planned', 'active', 'completed', 'cancelled'] }
+        }
+    },
+    task: {
+        type: 'object',
+        required: ['title', 'project_id', 'type_id', 'priority_id'],
+        properties: {
+            project_id: { type: 'integer' },
+            sprint_id: { type: 'integer' },
+            parent_task_id: { type: 'integer' },
+            type_id: { type: 'integer' },
+            priority_id: { type: 'integer' },
+            title: { type: 'string', minLength: 1, maxLength: 200 },
+            description: { type: 'string' },
+            status: { type: 'string', enum: ['todo', 'in_progress', 'in_review', 'done', 'cancelled'] },
+            estimated_hours: { type: 'number', minimum: 0 },
+            assigned_to: { type: 'integer' },
+            reporter: { type: 'integer' },
+            due_date: { type: 'string', format: 'date' }
+        }
+    },
+    taskUpdate: {
+        type: 'object',
+        properties: {
+            sprint_id: { type: 'integer' },
+            parent_task_id: { type: 'integer' },
+            type_id: { type: 'integer' },
+            priority_id: { type: 'integer' },
+            title: { type: 'string', minLength: 1, maxLength: 200 },
+            description: { type: 'string' },
+            status: { type: 'string', enum: ['todo', 'in_progress', 'in_review', 'done', 'cancelled'] },
+            estimated_hours: { type: 'number', minimum: 0 },
+            assigned_to: { type: 'integer' },
+            due_date: { type: 'string', format: 'date' }
+        }
+    }
+};
+
 class ValidationService {
     static async validate(schema, data) {
         try {
@@ -206,4 +287,27 @@ class ValidationService {
     }
 }
 
-module.exports = ValidationService;
+module.exports = {
+    ValidationService,
+    taskManagementSchemas,
+    validate: async (schemaName, data) => {
+        const schema = {
+            ...schemas,
+            ...taskManagementSchemas
+        }[schemaName];
+
+        if (!schema) {
+            throw new Error(`Schema ${schemaName} not found`);
+        }
+
+        try {
+            const result = await ajv.validate(schema, data);
+            if (!result) {
+                throw new ValidationError('Validation failed', ajv.errors);
+            }
+            return data;
+        } catch (error) {
+            throw error;
+        }
+    }
+};

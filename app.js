@@ -21,6 +21,7 @@ const companiesRouter = require('./routes/companies');
 const marketDataRouter = require('./routes/market-data');
 const financialDataRouter = require('./routes/financial-data');
 const shopRouter = require('./routes/shop');
+const tasksRouter = require('./routes/tasks');  // Add tasks router
 
 const app = express();
 
@@ -77,7 +78,8 @@ app.use('/api/companies', companiesRouter);
 app.use('/api/market-data', marketDataRouter);
 app.use('/api/financial-data', financialDataRouter);
 app.use('/api/monitoring', monitoringRouter);
-app.use('/api/shop', shopRouter);  // Add shop routes
+app.use('/api/shop', shopRouter);
+app.use('/api/tasks', tasksRouter);  // Register tasks routes
 
 // Error handling middleware
 app.use(errorMiddleware);

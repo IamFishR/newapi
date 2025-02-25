@@ -1,5 +1,6 @@
 const rolePermissionSeeder = require('./rolePermissionSeeder');
 const preferenceSeeder = require('./preferenceSeeder');
+const taskManagementSeeder = require('./taskManagementSeeder');
 const LoggingService = require('../services/monitoring/LoggingService');
 
 async function runSeeders() {
@@ -7,6 +8,7 @@ async function runSeeders() {
         // Run all seeders
         await rolePermissionSeeder();
         await preferenceSeeder();
+        await taskManagementSeeder();
         
         LoggingService.logDebug('All seeders completed successfully');
     } catch (error) {

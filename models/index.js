@@ -30,6 +30,21 @@ const HistoricalPrice = require('./market/HistoricalPrice');
 const HistoricalExtreme = require('./market/HistoricalExtreme');
 const BidAsk = require('./market/BidAsk');
 
+// Task management models
+const Project = require('./task/Project');
+const Sprint = require('./task/Sprint');
+const Task = require('./task/Task');
+const TaskType = require('./task/TaskType');
+const TaskPriority = require('./task/TaskPriority');
+const TaskLabel = require('./task/TaskLabel');
+const TaskComment = require('./task/TaskComment');
+const TaskAttachment = require('./task/TaskAttachment');
+const TaskTimeLog = require('./task/TaskTimeLog');
+const TaskStatusHistory = require('./task/TaskStatusHistory');
+const TaskAssignmentHistory = require('./task/TaskAssignmentHistory');
+const TaskMetrics = require('./task/TaskMetrics');
+const TaskAuditLog = require('./task/TaskAuditLog');
+
 // Shop models
 const Shop = require('./shop/Shop');
 const Product = require('./shop/Product');
@@ -70,6 +85,21 @@ const models = {
     HistoricalPrice: HistoricalPrice(sequelize, DataTypes),
     HistoricalExtreme: HistoricalExtreme(sequelize, DataTypes),
     BidAsk: BidAsk(sequelize, DataTypes),
+
+    // Initialize task management models
+    Project: Project(sequelize, DataTypes),
+    Sprint: Sprint(sequelize, DataTypes),
+    Task: Task(sequelize, DataTypes),
+    TaskType: TaskType(sequelize, DataTypes),
+    TaskPriority: TaskPriority(sequelize, DataTypes),
+    TaskLabel: TaskLabel(sequelize, DataTypes),
+    TaskComment: TaskComment(sequelize, DataTypes),
+    TaskAttachment: TaskAttachment(sequelize, DataTypes),
+    TaskTimeLog: TaskTimeLog(sequelize, DataTypes),
+    TaskStatusHistory: TaskStatusHistory(sequelize, DataTypes),
+    TaskAssignmentHistory: TaskAssignmentHistory(sequelize, DataTypes),
+    TaskMetrics: TaskMetrics(sequelize, DataTypes),
+    TaskAuditLog: TaskAuditLog(sequelize, DataTypes),
 
     // Initialize shop models
     Shop: Shop(sequelize, DataTypes),
