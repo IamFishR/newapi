@@ -17,6 +17,9 @@ const exphbs = require('express-handlebars');
 const indexRouter = require('./routes/index');
 const usersRouter = require('./routes/users');
 const monitoringRouter = require('./routes/monitoring');
+const companiesRouter = require('./routes/companies');
+const marketDataRouter = require('./routes/market-data');
+const financialDataRouter = require('./routes/financial-data');
 
 const app = express();
 
@@ -70,6 +73,9 @@ if (config.db.sync) {
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use('/monitoring', monitoringRouter);
+app.use('/companies', companiesRouter);
+app.use('/market-data', marketDataRouter);
+app.use('/financial-data', financialDataRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);

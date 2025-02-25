@@ -1,22 +1,25 @@
-const { PriceData, MarketDepth, Company } = require('../../models');
+const { PriceData, HistoricalPrice, PriceLimit, MarketDepth, HistoricalExtreme, Company } = require('../../models');
 const { Op } = require('sequelize');
 
 class MarketService {
-    // Price Data Operations
-    async addPriceData(data) {
-        return await PriceData.create(data);
+    // Price Data methods
+    async getLatestPriceData(limit = 100) {
+        return await PriceData.findAll({
+            order: [['date', 'DESC']],
+            limit
+        });
     }
 
-    async getLatestPrice(symbol) {
-        return await PriceData.findOne({
+    async getPriceDataBySymbol(symbol) {
+        return await PriceData.findAll({
             where: { symbol },
             order: [['date', 'DESC']]
         });
     }
 
-    async getPriceHistory(symbol, startDate, endDate) {
+    async getPriceDataByDateRange(symbol, startDate, endDate) {
         return await PriceData.findAll({
-            where: {
+            where: { 
                 symbol,
                 date: {
                     [Op.between]: [startDate, endDate]
@@ -26,15 +29,53 @@ class MarketService {
         });
     }
 
-    // Market Depth Operations
-    async addMarketDepth(data) {
-        return await MarketDepth.create(data);
+    // Historical Prices methods
+    async getHistoricalPrices(symbol, marketType = null, limit = 1000) {
+        const whereClause = { symbol };
+        
+        if (marketType) {
+            whereClause.market_type = marketType;
+        }
+        
+        return await HistoricalPrice.findAll({
+            where: whereClause,
+            order: [['timestamp', 'DESC']],
+            limit
+        });
     }
 
-    async getLatestMarketDepth(symbol) {
-        return await MarketDepth.findOne({
+    // Price Limits methods
+    async getPriceLimits(symbol) {
+        return await PriceLimit.findAll({
             where: { symbol },
-            order: [['timestamp', 'DESC']]
+            order: [['date', 'DESC']]
+        });
+    }
+
+    // Market Depth methods
+    async getMarketDepth(symbol) {
+        // Get the latest market depth data for the symbol
+        const latestMarketDepth = await MarketDepth.findAll({
+            where: { symbol },
+            order: [['date', 'DESC'], ['timestamp', 'DESC']],
+            limit: 1
+        });
+        
+        if (latestMarketDepth.length === 0) {
+            return null;
+        }
+        
+        // Fetch corresponding bid/ask data if needed
+        // This would require additional model definitions for bid_ask table
+        
+        return latestMarketDepth[0];
+    }
+
+    // Historical Extremes methods
+    async getHistoricalExtremes(symbol) {
+        return await HistoricalExtreme.findAll({
+            where: { symbol },
+            order: [['date', 'DESC']]
         });
     }
 

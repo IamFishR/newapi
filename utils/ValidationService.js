@@ -60,6 +60,119 @@ const schemas = {
         transaction_type: Joi.string().valid('BUY', 'SELL').required(),
         quantity: Joi.number().integer().min(1).required(),
         price: Joi.number().min(0).required()
+    }),
+
+    // Add company validation schemas
+    company: Joi.object({
+        symbol: Joi.string().max(20).required()
+            .messages({
+                'string.max': 'Symbol cannot be longer than 20 characters',
+                'any.required': 'Symbol is required'
+            }),
+        company_name: Joi.string().max(100).required()
+            .messages({
+                'string.max': 'Company name cannot be longer than 100 characters',
+                'any.required': 'Company name is required'
+            }),
+        isin: Joi.string().length(12).required()
+            .messages({
+                'string.length': 'ISIN must be exactly 12 characters',
+                'any.required': 'ISIN is required'
+            }),
+        listing_date: Joi.date().allow(null),
+        face_value: Joi.number().min(0).precision(2).allow(null),
+        issued_size: Joi.number().integer().min(0).allow(null),
+        industry: Joi.string().max(100).allow(null),
+        sector: Joi.string().max(100).allow(null),
+        macro_sector: Joi.string().max(100).allow(null),
+        basic_industry: Joi.string().max(100).allow(null)
+    }),
+
+    companyUpdate: Joi.object({
+        company_name: Joi.string().max(100)
+            .messages({
+                'string.max': 'Company name cannot be longer than 100 characters'
+            }),
+        isin: Joi.string().length(12)
+            .messages({
+                'string.length': 'ISIN must be exactly 12 characters'
+            }),
+        listing_date: Joi.date().allow(null),
+        face_value: Joi.number().min(0).precision(2).allow(null),
+        issued_size: Joi.number().integer().min(0).allow(null),
+        industry: Joi.string().max(100).allow(null),
+        sector: Joi.string().max(100).allow(null),
+        macro_sector: Joi.string().max(100).allow(null),
+        basic_industry: Joi.string().max(100).allow(null)
+    }),
+
+    // New validation schemas for financial data
+    financialResult: Joi.object({
+        symbol: Joi.string().max(20).required(),
+        from_date: Joi.date().required(),
+        to_date: Joi.date().required(),
+        expenditure: Joi.number().min(0).precision(2).allow(null),
+        income: Joi.number().min(0).precision(2).allow(null),
+        profit_before_tax: Joi.number().precision(2).allow(null),
+        profit_after_tax: Joi.number().precision(2).allow(null),
+        eps: Joi.number().precision(2).allow(null),
+        is_audited: Joi.boolean().default(false),
+        is_cumulative: Joi.boolean().default(false),
+        is_consolidated: Joi.boolean().default(false),
+        xbrl_attachment_url: Joi.string().uri().allow('', null),
+        notes_attachment_url: Joi.string().uri().allow('', null)
+    }),
+
+    financialResultUpdate: Joi.object({
+        expenditure: Joi.number().min(0).precision(2).allow(null),
+        income: Joi.number().min(0).precision(2).allow(null),
+        profit_before_tax: Joi.number().precision(2).allow(null),
+        profit_after_tax: Joi.number().precision(2).allow(null),
+        eps: Joi.number().precision(2).allow(null),
+        is_audited: Joi.boolean(),
+        is_cumulative: Joi.boolean(),
+        is_consolidated: Joi.boolean(),
+        xbrl_attachment_url: Joi.string().uri().allow('', null),
+        notes_attachment_url: Joi.string().uri().allow('', null)
+    }),
+
+    // Market data validation schemas
+    priceData: Joi.object({
+        symbol: Joi.string().max(20).required(),
+        date: Joi.date().required(),
+        last_price: Joi.number().precision(2).allow(null),
+        previous_close: Joi.number().precision(2).allow(null),
+        open_price: Joi.number().precision(2).allow(null),
+        high_price: Joi.number().precision(2).allow(null),
+        low_price: Joi.number().precision(2).allow(null),
+        close_price: Joi.number().precision(2).allow(null),
+        vwap: Joi.number().precision(2).allow(null),
+        volume: Joi.number().integer().min(0).allow(null),
+        traded_value: Joi.number().precision(2).min(0).allow(null),
+        market_cap: Joi.number().precision(2).min(0).allow(null)
+    }),
+
+    // Corporate action validation schema
+    corporateAction: Joi.object({
+        symbol: Joi.string().max(20).required(),
+        ex_date: Joi.date().required(),
+        purpose: Joi.string().max(255).required()
+    }),
+
+    // Board meeting validation schema
+    boardMeeting: Joi.object({
+        symbol: Joi.string().max(20).required(),
+        meeting_date: Joi.date().required(),
+        purpose: Joi.string().required()
+    }),
+
+    // Shareholding pattern validation schema
+    shareholdingPattern: Joi.object({
+        symbol: Joi.string().max(20).required(),
+        period_end_date: Joi.date().required(),
+        promoter_group_percentage: Joi.number().precision(2).min(0).max(100).allow(null),
+        public_percentage: Joi.number().precision(2).min(0).max(100).allow(null),
+        employee_trusts_percentage: Joi.number().precision(2).min(0).max(100).allow(null)
     })
 };
 
