@@ -29,14 +29,20 @@ const PriceLimit = require('./market/PriceLimit');
 const HistoricalPrice = require('./market/HistoricalPrice');
 const HistoricalExtreme = require('./market/HistoricalExtreme');
 const BidAsk = require('./market/BidAsk');
-const Notification = require('./user/Notification');
-const ApiKey = require('./user/ApiKey');
-const UserRole = require('./user/UserRole');
-const RolePermission = require('./user/RolePermission');
-const UserPermission = require('./user/UserPermission');
 
-// Initialize models
+// Shop models
+const Shop = require('./shop/Shop');
+const Product = require('./shop/Product');
+const ShopCategory = require('./shop/ShopCategory');
+const ShopAuditLog = require('./shop/ShopAuditLog');
+const Order = require('./shop/Order');
+const OrderItem = require('./shop/OrderItem');
+const ProductTag = require('./shop/ProductTag');
+const ProductPriceHistory = require('./shop/ProductPriceHistory');
+const InventoryMovement = require('./shop/InventoryMovement');
+
 const models = {
+    // Initialize models
     Company: Company(sequelize, DataTypes),
     User: User(sequelize, DataTypes),
     Portfolio: Portfolio(sequelize, DataTypes),
@@ -51,7 +57,7 @@ const models = {
     Permission: Permission(sequelize, DataTypes),
     AuditLog: AuditLog(sequelize, DataTypes),
     
-    // Initialize new models
+    // Initialize stock/market models
     CompanyIndex: CompanyIndex(sequelize, DataTypes),
     CorporateAction: CorporateAction(sequelize, DataTypes),
     BoardMeeting: BoardMeeting(sequelize, DataTypes),
@@ -64,11 +70,17 @@ const models = {
     HistoricalPrice: HistoricalPrice(sequelize, DataTypes),
     HistoricalExtreme: HistoricalExtreme(sequelize, DataTypes),
     BidAsk: BidAsk(sequelize, DataTypes),
-    Notification: Notification(sequelize, DataTypes),
-    ApiKey: ApiKey(sequelize, DataTypes),
-    UserRole: UserRole(sequelize, DataTypes),
-    RolePermission: RolePermission(sequelize, DataTypes),
-    UserPermission: UserPermission(sequelize, DataTypes)
+
+    // Initialize shop models
+    Shop: Shop(sequelize, DataTypes),
+    Product: Product(sequelize, DataTypes),
+    ShopCategory: ShopCategory(sequelize, DataTypes),
+    ShopAuditLog: ShopAuditLog(sequelize, DataTypes),
+    Order: Order(sequelize, DataTypes),
+    OrderItem: OrderItem(sequelize, DataTypes),
+    ProductTag: ProductTag(sequelize, DataTypes),
+    ProductPriceHistory: ProductPriceHistory(sequelize, DataTypes),
+    InventoryMovement: InventoryMovement(sequelize, DataTypes)
 };
 
 // Set up associations
@@ -76,6 +88,80 @@ Object.keys(models).forEach(modelName => {
     if (models[modelName].associate) {
         models[modelName].associate(models);
     }
+});
+
+// Shop Management Associations
+ShopCategory.hasMany(Product, {
+    foreignKey: 'category_id',
+    as: 'products'
+});
+
+ShopCategory.hasMany(ShopCategory, {
+    foreignKey: 'parent_category_id',
+    as: 'subcategories'
+});
+
+ShopCategory.belongsTo(ShopCategory, {
+    foreignKey: 'parent_category_id',
+    as: 'parent'
+});
+
+Shop.hasMany(Product, {
+    foreignKey: 'shop_id',
+    as: 'products'
+});
+
+Shop.hasMany(Order, {
+    foreignKey: 'shop_id',
+    as: 'orders'
+});
+
+Product.belongsTo(Shop, {
+    foreignKey: 'shop_id'
+});
+
+Product.belongsTo(ShopCategory, {
+    foreignKey: 'category_id'
+});
+
+Product.hasMany(OrderItem, {
+    foreignKey: 'product_id'
+});
+
+// New associations for the added models
+Product.hasMany(ProductPriceHistory, {
+    foreignKey: 'product_id'
+});
+
+Product.hasMany(InventoryMovement, {
+    foreignKey: 'product_id'
+});
+
+Product.belongsToMany(ProductTag, {
+    through: 'product_tag_relations',
+    foreignKey: 'product_id'
+});
+
+ProductTag.belongsToMany(Product, {
+    through: 'product_tag_relations',
+    foreignKey: 'tag_id'
+});
+
+Order.belongsTo(Shop, {
+    foreignKey: 'shop_id'
+});
+
+Order.hasMany(OrderItem, {
+    foreignKey: 'order_id',
+    as: 'items'
+});
+
+OrderItem.belongsTo(Order, {
+    foreignKey: 'order_id'
+});
+
+OrderItem.belongsTo(Product, {
+    foreignKey: 'product_id'
 });
 
 module.exports = {

@@ -20,6 +20,7 @@ const monitoringRouter = require('./routes/monitoring');
 const companiesRouter = require('./routes/companies');
 const marketDataRouter = require('./routes/market-data');
 const financialDataRouter = require('./routes/financial-data');
+const shopRouter = require('./routes/shop');
 
 const app = express();
 
@@ -70,12 +71,13 @@ if (config.db.sync) {
 }
 
 // Routes
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/monitoring', monitoringRouter);
-app.use('/companies', companiesRouter);
-app.use('/market-data', marketDataRouter);
-app.use('/financial-data', financialDataRouter);
+app.use('/api', indexRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/companies', companiesRouter);
+app.use('/api/market-data', marketDataRouter);
+app.use('/api/financial-data', financialDataRouter);
+app.use('/api/monitoring', monitoringRouter);
+app.use('/api/shop', shopRouter);  // Add shop routes
 
 // Error handling middleware
 app.use(errorMiddleware);
