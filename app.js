@@ -10,6 +10,7 @@ const { sanitizer } = require('./middleware/sanitizer');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const loggingMiddleware = require('./middleware/logging');
 const helmet = require('helmet');
+const cors = require('cors'); // Import the cors package
 const MonitoringService = require('./services/monitoring/MonitoringService');
 const LoggingService = require('./services/monitoring/LoggingService');
 const exphbs = require('express-handlebars');
@@ -27,6 +28,16 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration
+const corsOptions = {
+  origin: ['http://localhost:3002', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 
 // View engine setup
 app.engine('handlebars', exphbs.engine({
