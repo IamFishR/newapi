@@ -1,4 +1,5 @@
-const { Company, PriceData, FinancialResult, CompanyIndex, CorporateAction, BoardMeeting, ShareholdingPattern, SecurityInfo, RiskMetric, DeliveryPosition } = require('../../models');
+const { Company, PriceData, FinancialResult, CompanyIndex, CorporateAction, BoardMeeting, ShareholdingPattern, SecurityInfo, RiskMetric, DeliveryPosition, MacroEconomicSector, Sector, Industry, BasicIndustry } = require('../../models');
+const { Op, Sequelize } = require('sequelize');
 
 class CompanyService {
     // Create
@@ -106,6 +107,183 @@ class CompanyService {
         return await DeliveryPosition.findAll({
             where: { symbol },
             order: [['date', 'DESC']]
+        });
+    }
+
+    // New sector-related methods
+    async getAllSectors() {
+        return await Company.findAll({
+            attributes: [
+                'sector',
+                [Sequelize.fn('COUNT', Sequelize.col('symbol')), 'company_count']
+            ],
+            where: {
+                sector: {
+                    [Op.ne]: null
+                }
+            },
+            group: ['sector'],
+            order: ['sector']
+        });
+    }
+
+    async getCompaniesBySector(sector) {
+        return await Company.findAll({
+            where: { sector },
+            include: [{
+                model: PriceData,
+                limit: 1,
+                order: [['date', 'DESC']],
+                required: false
+            }],
+            order: [['company_name', 'ASC']]
+        });
+    }
+
+    // Comprehensive data retrieval
+    async getComprehensiveData(symbol) {
+        return await Company.findByPk(symbol, {
+            include: [
+                {
+                    model: PriceData,
+                    limit: 1,
+                    order: [['date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: FinancialResult,
+                    limit: 4,
+                    order: [['to_date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: CompanyIndex,
+                    required: false
+                },
+                {
+                    model: CorporateAction,
+                    limit: 5,
+                    order: [['ex_date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: BoardMeeting,
+                    limit: 5,
+                    order: [['meeting_date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: ShareholdingPattern,
+                    limit: 1,
+                    order: [['period_end_date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: SecurityInfo,
+                    limit: 1,
+                    order: [['date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: RiskMetric,
+                    limit: 1,
+                    order: [['date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: DeliveryPosition,
+                    limit: 5,
+                    order: [['date', 'DESC']],
+                    required: false
+                },
+                {
+                    model: BasicIndustry,
+                    include: [{
+                        model: Industry,
+                        include: [{
+                            model: Sector,
+                            include: [{
+                                model: MacroEconomicSector
+                            }]
+                        }]
+                    }]
+                }
+            ]
+        });
+    }
+
+    // New sector hierarchy methods
+    async getMacroEconomicSectors() {
+        return await MacroEconomicSector.findAll({
+            include: [{
+                model: Sector,
+                include: [{
+                    model: Industry,
+                    include: [{
+                        model: BasicIndustry,
+                        include: [{
+                            model: Company,
+                            attributes: ['symbol', 'company_name']
+                        }]
+                    }]
+                }]
+            }]
+        });
+    }
+
+    async getSectorsByMacroEconomicSector(mesCode) {
+        return await Sector.findAll({
+            where: { MES_Code: mesCode },
+            include: [{
+                model: Industry,
+                include: [{
+                    model: BasicIndustry,
+                    include: [{
+                        model: Company,
+                        attributes: ['symbol', 'company_name']
+                    }]
+                }]
+            }]
+        });
+    }
+
+    async getIndustriesBySector(sectCode) {
+        return await Industry.findAll({
+            where: { Sect_Code: sectCode },
+            include: [{
+                model: BasicIndustry,
+                include: [{
+                    model: Company,
+                    attributes: ['symbol', 'company_name']
+                }]
+            }]
+        });
+    }
+
+    async getBasicIndustriesByIndustry(indCode) {
+        return await BasicIndustry.findAll({
+            where: { Ind_Code: indCode },
+            include: [{
+                model: Company,
+                attributes: ['symbol', 'company_name']
+            }]
+        });
+    }
+
+    async getCompanyWithSectorHierarchy(symbol) {
+        return await Company.findByPk(symbol, {
+            include: [{
+                model: BasicIndustry,
+                include: [{
+                    model: Industry,
+                    include: [{
+                        model: Sector,
+                        include: [{
+                            model: MacroEconomicSector
+                        }]
+                    }]
+                }]
+            }]
         });
     }
 }

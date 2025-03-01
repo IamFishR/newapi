@@ -546,3 +546,42 @@ CREATE TABLE IF NOT EXISTS `order_status_history` (
     INDEX `idx_status_history_order` (`order_id`)
 );
 
+-- Create table for Macro Economic Sector
+CREATE TABLE MacroEconomicSector (
+    MES_Code VARCHAR(10) PRIMARY KEY,
+    MacroEconomicSectorName VARCHAR(100) NOT NULL,
+    Description TEXT,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create table for Sector
+CREATE TABLE Sector (
+    Sect_Code VARCHAR(10) PRIMARY KEY,
+    SectorName VARCHAR(100) NOT NULL,
+    MES_Code VARCHAR(10) NOT NULL,
+    FOREIGN KEY (MES_Code) REFERENCES MacroEconomicSector(MES_Code),
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create table for Industry
+CREATE TABLE Industry (
+    Ind_Code VARCHAR(10) PRIMARY KEY,
+    IndustryName VARCHAR(100) NOT NULL,
+    Sect_Code VARCHAR(10) NOT NULL,
+    FOREIGN KEY (Sect_Code) REFERENCES Sector(Sect_Code),
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create table for Basic Industry
+CREATE TABLE BasicIndustry (
+    Basic_Ind_Code VARCHAR(12) PRIMARY KEY,
+    BasicIndustryName VARCHAR(100) NOT NULL,
+    Ind_Code VARCHAR(10) NOT NULL,
+    Definition TEXT,
+    FOREIGN KEY (Ind_Code) REFERENCES Industry(Ind_Code),
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

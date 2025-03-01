@@ -127,6 +127,26 @@
 }
 ```
 
+### Create Company
+- **URL**: `/companies`
+- **Method**: `POST`
+- **Authentication**: Required (Admin only)
+- **Validation**: Uses 'company' schema
+- **Response**: Created company data
+
+### Update Company
+- **URL**: `/companies/:symbol`
+- **Method**: `PUT`
+- **Authentication**: Required (Admin only)
+- **Validation**: Uses 'companyUpdate' schema
+- **Response**: Updated company data
+
+### Delete Company
+- **URL**: `/companies/:symbol`
+- **Method**: `DELETE`
+- **Authentication**: Required (Admin only)
+- **Response**: Success message
+
 ### Get Companies by Industry
 - **URL**: `/companies/industry/:industry`
 - **Method**: `GET`
@@ -141,6 +161,11 @@
 - **URL**: `/companies/:symbol/financials`
 - **Method**: `GET`
 - **Response**: Company financial information
+
+### Get Company Indices
+- **URL**: `/companies/:symbol/indices`
+- **Method**: `GET`
+- **Response**: Company indices data
 
 ### Get Corporate Actions
 - **URL**: `/companies/:symbol/corporate-actions`
@@ -171,6 +196,118 @@
 - **URL**: `/companies/:symbol/delivery-positions`
 - **Method**: `GET`
 - **Response**: Delivery positions data
+
+### Get All Sectors
+- **URL**: `/companies/sectors`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "sector": "string",
+            "company_count": "number"
+        }
+    ]
+}
+```
+
+### Get Companies by Sector
+- **URL**: `/companies/sectors/:sector`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "symbol": "string",
+            "company_name": "string",
+            "sector": "string",
+            "priceData": {
+                "last_price": "number",
+                "date": "string"
+            }
+        }
+    ]
+}
+```
+
+### Get Sector Performance
+- **URL**: `/companies/sectors/performance`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "sector": "string",
+            "total_profit": "number",
+            "average_eps": "number"
+        }
+    ]
+}
+```
+
+### Get Comprehensive Stock Data
+- **URL**: `/companies/:symbol/comprehensive`
+- **Method**: `GET`
+- **Description**: Returns all available data for a company including latest price, financials, indices, corporate actions, board meetings, shareholding patterns, security info, risk metrics, and delivery positions.
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "symbol": "string",
+        "company_name": "string",
+        "sector": "string",
+        "industry": "string",
+        "priceData": {
+            "last_price": "number",
+            "date": "string"
+        },
+        "financialResults": [...],
+        "companyIndices": [...],
+        "corporateActions": [...],
+        "boardMeetings": [...],
+        "shareholdingPattern": {...},
+        "securityInfo": {...},
+        "riskMetrics": {...},
+        "deliveryPositions": [...]
+    }
+}
+```
+
+### Error Responses
+
+#### Not Found (404)
+```json
+{
+    "status": "fail",
+    "message": "Company not found"
+}
+```
+
+#### Validation Error (400)
+```json
+{
+    "status": "fail",
+    "message": "Validation Error",
+    "errors": [
+        // Validation error details
+    ]
+}
+```
+
+#### Permission Error (403)
+```json
+{
+    "status": "fail",
+    "message": "Insufficient role permissions"
+}
+```
 
 ## Market Data
 
