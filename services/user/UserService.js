@@ -1,4 +1,4 @@
-const { User, Portfolio, Transaction, UserPreference } = require('../../models');
+const { User, Portfolio, Transaction } = require('../../models');
 const { Op } = require('sequelize');
 const PreferenceService = require('./PreferenceService');
 const SessionService = require('./SessionService');

@@ -2,7 +2,7 @@ const sequelize = require('../config/sequelize');
 const { DataTypes } = require('sequelize');
 
 // Import models
-const models = {
+const modelDefinitions = {
     // Core models
     Company: require('./stock/Company'),
     User: require('./user/User'),
@@ -58,6 +58,12 @@ const models = {
     ProductPriceHistory: require('./shop/ProductPriceHistory'),
     InventoryMovement: require('./shop/InventoryMovement')
 };
+
+// Initialize models
+const models = Object.entries(modelDefinitions).reduce((acc, [name, definition]) => {
+    acc[name] = definition(sequelize, DataTypes);
+    return acc;
+}, {});
 
 // Set up model associations
 Object.values(models).forEach(model => {

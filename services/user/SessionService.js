@@ -106,16 +106,9 @@ class SessionService {
         if (!token) return;
         
         try {
-            const session = await UserSession.findOne({
+            await UserSession.destroy({
                 where: { session_token: token }
             });
-            
-            if (session) {
-                await session.update({
-                    session_token: '',
-                    expiry: new Date()
-                });
-            }
         } catch (error) {
             LoggingService.logError(error, { context: 'Session invalidation' });
             throw error;

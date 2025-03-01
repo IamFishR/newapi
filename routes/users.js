@@ -12,7 +12,8 @@ const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: '/'
 };
 
 // Apply API rate limiter to all routes
@@ -24,7 +25,7 @@ router.post('/register', authLimiter, async (req, res, next) => {
         const validatedData = await ValidationService.validate('user', req.body);
         const { user, session } = await UserService.createUser(validatedData, req);
         
-        res.cookie('session_token', session.session_token, COOKIE_OPTIONS);
+        res.cookie('exapis_session', session.session_token, COOKIE_OPTIONS);
         res.status(201).json({ 
             status: 'success',
             data: {
@@ -50,27 +51,38 @@ router.post('/authenticate', authLimiter, async (req, res, next) => {
         const { email, password } = req.body;
         const { user, session } = await UserService.loginUser(email, password, req);
         
-        res.cookie('session_token', session.session_token, COOKIE_OPTIONS);
+        res.cookie('exapis_session', session.session_token, COOKIE_OPTIONS);
         res.json({
-            user_id: user.id,
-            name: user.username,
-            email: user.email,
-            session_token: session.session_token
+            user: {
+                id: user.id,
+                name: user.username,
+                email: user.email
+            },            
         });
     } catch (error) {
+        if (error.name === 'AuthenticationError') {
+            return res.status(401).json({
+                status: 'fail',
+                message: 'Authentication failed',
+            });
+        }
         next(error);
     }
 });
 
+router.get('/verifyToken', auth.isAuthenticated, (req, res) => {
+    res.json({ status: 'success' });
+});
+
 router.post('/signout', auth.isAuthenticated, async (req, res) => {
     try {
-        const token = (req.cookies.session_token || '').trim();
+        const token = (req.cookies.exapis_session || '').trim();
         if (!token) {
             return res.status(400).json({ error: 'No session token provided' });
         }
         LoggingService.logDebug('User signing out', { token });
         await UserService.logoutUser(token);
-        res.clearCookie('session_token');
+        res.clearCookie('exapis_session');
         res.json({ message: 'Sign out successful' });
     } catch (error) {
         LoggingService.logError(error, { context: 'Sign out operation' });

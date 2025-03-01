@@ -18,14 +18,11 @@ module.exports = (sequelize, DataTypes) => {
                 through: 'user_roles',
                 foreignKey: 'user_id'
             });
-            User.belongsToMany(models.Permission, {
-                through: 'user_permissions',
-                foreignKey: 'user_id'
-            });
         }
 
+        // Add instance method for password validation
         async validatePassword(password) {
-            return bcrypt.compare(password, this.password);
+            return await bcrypt.compare(password, this.password);
         }
     }
 

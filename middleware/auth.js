@@ -6,7 +6,7 @@ const auth = {
     // Middleware to check if user is authenticated
     isAuthenticated: async (req, res, next) => {
         try {
-            let token = req.cookies.session_token;
+            let token = req.cookies.exapis_session;
             
             // Check Authorization header if no cookie
             if (!token && req.headers.authorization) {
