@@ -1,6 +1,7 @@
 const SessionService = require('../services/user/SessionService');
 const RoleService = require('../services/user/RoleService');
 const LoggingService = require('../services/monitoring/LoggingService');
+const UserService = require('../services/user/UserService');
 
 const auth = {
     // Middleware to check if user is authenticated
@@ -28,7 +29,21 @@ const auth = {
                 return res.status(401).json({ message: 'Invalid or expired session' });
             }
 
-            req.user = { id: session.user_id };
+            // Fetch complete user information
+            const user = await UserService.getUser(session.user_id);
+            if (!user) {
+                return res.status(401).json({ message: 'User not found' });
+            }
+
+            // Add user information to request
+            req.user = {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                lastActivity: session.last_activity,
+                sessionId: session.id
+            };
+            
             next();
         } catch (error) {
             LoggingService.logError(error, { 

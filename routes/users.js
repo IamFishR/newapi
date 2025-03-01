@@ -71,7 +71,7 @@ router.post('/authenticate', authLimiter, async (req, res, next) => {
 });
 
 router.get('/verifyToken', auth.isAuthenticated, (req, res) => {
-    res.json({ status: 'success' });
+    res.json({ status: 'success', user: req.user});
 });
 
 router.post('/signout', auth.isAuthenticated, async (req, res) => {

@@ -23,6 +23,7 @@ const marketDataRouter = require('./routes/market-data');
 const financialDataRouter = require('./routes/financial-data');
 const shopRouter = require('./routes/shop');
 const tasksRouter = require('./routes/tasks');  // Add tasks router
+const { max } = require('./models/shop/OrderStatusHistory');
 
 const app = express();
 
@@ -31,12 +32,38 @@ app.use(helmet());
 
 // CORS configuration
 const corsOptions = {
-  origin: ['http://localhost:3002', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    // Allow requests from environment-defined origins and localhost during development
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:3000',
+      'http://localhost:3002'
+    ].filter(Boolean);
+    
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range', 'Content-Disposition'],
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 204, // Changed to 204 for OPTIONS requests
+  maxAge: 3600,
+  preflightContinue: false
 };
+
+// Apply CORS before any other middleware
 app.use(cors(corsOptions));
 
 // View engine setup
