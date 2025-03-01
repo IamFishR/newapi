@@ -94,6 +94,9 @@ class RoleService {
 
     async isUserInRole(userId, roleName) {
         const roles = await this.getUserRoles(userId);
+        if (Array.isArray(roleName)) {
+            return roles.some(r => roleName.includes(r.role_name));
+        }
         return roles.some(r => r.role_name === roleName);
     }
 }

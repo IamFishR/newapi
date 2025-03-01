@@ -3,6 +3,23 @@ const RoleService = require('../services/user/RoleService');
 const LoggingService = require('../services/monitoring/LoggingService');
 const UserService = require('../services/user/UserService');
 
+// Helper function to build user object with extensible properties
+const buildUserObject = async (user, session) => {
+    const baseObject = {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        lastActivity: session.last_activity,
+        sessionId: session.id,
+    };
+
+    // Add roles
+    const roles = await RoleService.getUserRoles(user.id);
+    baseObject.roles = roles.map(role => role.role_name);
+
+    return baseObject;
+};
+
 const auth = {
     // Middleware to check if user is authenticated
     isAuthenticated: async (req, res, next) => {
@@ -35,14 +52,8 @@ const auth = {
                 return res.status(401).json({ message: 'User not found' });
             }
 
-            // Add user information to request
-            req.user = {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                lastActivity: session.last_activity,
-                sessionId: session.id
-            };
+            // Build user object with all required properties
+            req.user = await buildUserObject(user, session);
             
             next();
         } catch (error) {

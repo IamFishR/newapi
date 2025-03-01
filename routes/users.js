@@ -7,6 +7,8 @@ const RoleService = require('../services/user/RoleService');
 const PreferenceService = require('../services/user/PreferenceService');
 const ValidationService = require('../utils/ValidationService');
 const LoggingService = require('../services/monitoring/LoggingService');
+const { Notification } = require('../models');
+const { Op } = require('sequelize');
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
@@ -147,6 +149,200 @@ router.put('/:userId/role', auth.isAuthenticated, auth.hasRole('admin'), async (
         res.json({ message: 'Role updated successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+});
+
+// Notification routes
+router.get('/notifications', auth.isAuthenticated, async (req, res) => {
+    try {
+        const notifications = await Notification.findAll({
+            where: {
+                user_id: req.user.id
+            },
+            order: [['timestamp', 'DESC']]
+        });
+        
+        res.json(notifications);
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get user notifications' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/notifications/:id', auth.isAuthenticated, async (req, res) => {
+    try {
+        const notification = await Notification.findOne({
+            where: {
+                id: req.params.id,
+                user_id: req.user.id
+            }
+        });
+        
+        if (!notification) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+        
+        res.json(notification);
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get notification by ID' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/notifications/:id/read', auth.isAuthenticated, async (req, res) => {
+    try {
+        const notification = await Notification.findOne({
+            where: {
+                id: req.params.id,
+                user_id: req.user.id
+            }
+        });
+        
+        if (!notification) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+        
+        await notification.update({ is_read: true });
+        res.json({ status: 'success', message: 'Notification marked as read' });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Mark notification as read' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/notifications/read-all', auth.isAuthenticated, async (req, res) => {
+    try {
+        await Notification.update(
+            { is_read: true },
+            {
+                where: {
+                    user_id: req.user.id,
+                    is_read: false
+                }
+            }
+        );
+        
+        res.json({ status: 'success', message: 'All notifications marked as read' });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Mark all notifications as read' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/notifications/:id', auth.isAuthenticated, async (req, res) => {
+    try {
+        const result = await Notification.destroy({
+            where: {
+                id: req.params.id,
+                user_id: req.user.id
+            }
+        });
+        
+        if (result === 0) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+        
+        res.json({ status: 'success', message: 'Notification deleted' });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Delete notification' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/notifications/unread-count', auth.isAuthenticated, async (req, res) => {
+    try {
+        const count = await Notification.count({
+            where: {
+                user_id: req.user.id,
+                is_read: false
+            }
+        });
+        
+        res.json({ unread_count: count });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get unread notification count' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add new notification - admin or system can create notifications for users
+router.post('/notifications', auth.isAuthenticated, auth.hasRole(['admin', 'system']), async (req, res) => {
+    try {
+        const { user_id, message } = req.body;
+        
+        if (!user_id || !message) {
+            return res.status(400).json({ error: 'User ID and message are required' });
+        }
+        
+        const notification = await Notification.create({
+            user_id,
+            message,
+            is_read: false,
+            timestamp: new Date()
+        });
+        
+        LoggingService.logDebug('Notification created', { notification, creator: req.user.id });
+        res.status(201).json({ status: 'success', notification });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Create notification' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create notification for multiple users at once
+router.post('/notifications/bulk', auth.isAuthenticated, auth.hasRole(['admin', 'system']), async (req, res) => {
+    try {
+        const { user_ids, message } = req.body;
+        
+        if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0 || !message) {
+            return res.status(400).json({ error: 'Valid user IDs array and message are required' });
+        }
+        
+        const notifications = await Promise.all(user_ids.map(user_id => {
+            return Notification.create({
+                user_id,
+                message,
+                is_read: false,
+                timestamp: new Date()
+            });
+        }));
+        
+        LoggingService.logDebug('Bulk notifications created', { 
+            count: notifications.length, 
+            creator: req.user.id 
+        });
+        
+        res.status(201).json({ 
+            status: 'success', 
+            message: `Created ${notifications.length} notifications`,
+            count: notifications.length
+        });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Create bulk notifications' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Create notification for currently authenticated user (self-notification)
+router.post('/notifications/self', auth.isAuthenticated, async (req, res) => {
+    try {
+        const { message } = req.body;
+        
+        if (!message) {
+            return res.status(400).json({ error: 'Message is required' });
+        }
+        
+        const notification = await Notification.create({
+            user_id: req.user.id,
+            message,
+            is_read: false,
+            timestamp: new Date()
+        });
+        
+        res.status(201).json({ status: 'success', notification });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Create self-notification' });
+        res.status(500).json({ error: error.message });
     }
 });
 

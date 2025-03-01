@@ -17,6 +17,7 @@ const modelDefinitions = {
     Role: require('./user/Role'),
     Permission: require('./user/Permission'),
     AuditLog: require('./audit/AuditLog'),
+    Notification: require('./user/Notification'),
     
     // Stock/market models
     CompanyIndex: require('./stock/CompanyIndex'),
