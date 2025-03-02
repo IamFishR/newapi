@@ -26,19 +26,14 @@ module.exports = (sequelize, DataTypes) => {
                 through: models.Portfolio,
                 foreignKey: 'symbol'
             });
-
-            // Sector hierarchy associations
-            Company.belongsTo(models.BasicIndustry, {
-                foreignKey: 'basic_industry',
-                targetKey: 'Basic_Ind_Code'
-            });
         }
     }
 
     Company.init({
         symbol: {
             type: DataTypes.STRING(20),
-            primaryKey: true
+            primaryKey: true,
+            allowNull: false
         },
         company_name: {
             type: DataTypes.STRING(100),
@@ -49,18 +44,23 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false
         },
         listing_date: DataTypes.DATE,
-        face_value: DataTypes.DECIMAL(10, 2),
+        face_value: DataTypes.DECIMAL(10,2),
         issued_size: DataTypes.BIGINT,
-        industry: DataTypes.STRING(100),
-        sector: DataTypes.STRING(100),
-        macro_sector: DataTypes.STRING(100),
+        industry: {
+            type: DataTypes.STRING(100),
+            allowNull: true
+        },
+        sector: {
+            type: DataTypes.STRING(100),
+            allowNull: true
+        },
+        macro_sector: {
+            type: DataTypes.STRING(100),
+            allowNull: true
+        },
         basic_industry: {
-            type: DataTypes.STRING(12),
-            allowNull: true,
-            references: {
-                model: 'BasicIndustry',
-                key: 'Basic_Ind_Code'
-            }
+            type: DataTypes.STRING(100),
+            allowNull: true
         }
     }, {
         sequelize,

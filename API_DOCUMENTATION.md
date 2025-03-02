@@ -99,123 +99,7 @@
 ### Get All Companies
 - **URL**: `/companies`
 - **Method**: `GET`
-- **Response**:
-```json
-{
-    "status": "success",
-    "data": [
-        {
-            "symbol": "string",
-            "name": "string",
-            "other_company_data": "..."
-        }
-    ]
-}
-```
-
-### Get Company by Symbol
-- **URL**: `/companies/:symbol`
-- **Method**: `GET`
-- **Response**:
-```json
-{
-    "status": "success",
-    "data": {
-        "symbol": "string",
-        "company_details": "..."
-    }
-}
-```
-
-### Create Company
-- **URL**: `/companies`
-- **Method**: `POST`
-- **Authentication**: Required (Admin only)
-- **Validation**: Uses 'company' schema
-- **Response**: Created company data
-
-### Update Company
-- **URL**: `/companies/:symbol`
-- **Method**: `PUT`
-- **Authentication**: Required (Admin only)
-- **Validation**: Uses 'companyUpdate' schema
-- **Response**: Updated company data
-
-### Delete Company
-- **URL**: `/companies/:symbol`
-- **Method**: `DELETE`
-- **Authentication**: Required (Admin only)
-- **Response**: Success message
-
-### Get Companies by Industry
-- **URL**: `/companies/industry/:industry`
-- **Method**: `GET`
-- **Response**: List of companies in the industry
-
-### Get Company with Latest Price
-- **URL**: `/companies/:symbol/with-price`
-- **Method**: `GET`
-- **Response**: Company data with latest price information
-
-### Get Company Financial Data
-- **URL**: `/companies/:symbol/financials`
-- **Method**: `GET`
-- **Response**: Company financial information
-
-### Get Company Indices
-- **URL**: `/companies/:symbol/indices`
-- **Method**: `GET`
-- **Response**: Company indices data
-
-### Get Corporate Actions
-- **URL**: `/companies/:symbol/corporate-actions`
-- **Method**: `GET`
-- **Response**: List of corporate actions
-
-### Get Board Meetings
-- **URL**: `/companies/:symbol/board-meetings`
-- **Method**: `GET`
-- **Response**: List of board meetings
-
-### Get Shareholding Patterns
-- **URL**: `/companies/:symbol/shareholding-patterns`
-- **Method**: `GET`
-- **Response**: Shareholding pattern data
-
-### Get Security Info
-- **URL**: `/companies/:symbol/security-info`
-- **Method**: `GET`
-- **Response**: Security information
-
-### Get Risk Metrics
-- **URL**: `/companies/:symbol/risk-metrics`
-- **Method**: `GET`
-- **Response**: Risk metrics data
-
-### Get Delivery Positions
-- **URL**: `/companies/:symbol/delivery-positions`
-- **Method**: `GET`
-- **Response**: Delivery positions data
-
-### Get All Sectors
-- **URL**: `/companies/sectors`
-- **Method**: `GET`
-- **Response**:
-```json
-{
-    "status": "success",
-    "data": [
-        {
-            "sector": "string",
-            "company_count": "number"
-        }
-    ]
-}
-```
-
-### Get Companies by Sector
-- **URL**: `/companies/sectors/:sector`
-- **Method**: `GET`
+- **Auth**: Required
 - **Response**:
 ```json
 {
@@ -224,37 +108,19 @@
         {
             "symbol": "string",
             "company_name": "string",
-            "sector": "string",
-            "priceData": {
-                "last_price": "number",
-                "date": "string"
-            }
+            "isin": "string",
+            "listing_date": "date",
+            "face_value": "number",
+            "issued_size": "number"
         }
     ]
 }
 ```
 
-### Get Sector Performance
-- **URL**: `/companies/sectors/performance`
+### Get Company by Symbol
+- **URL**: `/companies/:symbol`
 - **Method**: `GET`
-- **Response**:
-```json
-{
-    "status": "success",
-    "data": [
-        {
-            "sector": "string",
-            "total_profit": "number",
-            "average_eps": "number"
-        }
-    ]
-}
-```
-
-### Get Comprehensive Stock Data
-- **URL**: `/companies/:symbol/comprehensive`
-- **Method**: `GET`
-- **Description**: Returns all available data for a company including latest price, financials, indices, corporate actions, board meetings, shareholding patterns, security info, risk metrics, and delivery positions.
+- **Auth**: Required
 - **Response**:
 ```json
 {
@@ -262,20 +128,275 @@
     "data": {
         "symbol": "string",
         "company_name": "string",
-        "sector": "string",
-        "industry": "string",
+        "isin": "string",
+        "listing_date": "date",
+        "face_value": "number",
+        "issued_size": "number"
+    }
+}
+```
+
+### Create Company
+- **URL**: `/companies`
+- **Method**: `POST`
+- **Auth**: Required (admin/system only)
+- **Body**:
+```json
+{
+    "symbol": "string",
+    "company_name": "string",
+    "isin": "string",
+    "listing_date": "date",
+    "face_value": "number",
+    "issued_size": "number"
+}
+```
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "symbol": "string",
+        "company_name": "string",
+        "isin": "string",
+        "listing_date": "date",
+        "face_value": "number",
+        "issued_size": "number"
+    }
+}
+```
+
+### Update Company
+- **URL**: `/companies/:symbol`
+- **Method**: `PUT`
+- **Auth**: Required (admin/system only)
+- **Body**:
+```json
+{
+    "company_name": "string",
+    "isin": "string",
+    "listing_date": "date",
+    "face_value": "number",
+    "issued_size": "number"
+}
+```
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "symbol": "string",
+        "company_name": "string",
+        "isin": "string",
+        "listing_date": "date",
+        "face_value": "number",
+        "issued_size": "number"
+    }
+}
+```
+
+### Delete Company
+- **URL**: `/companies/:symbol`
+- **Method**: `DELETE`
+- **Auth**: Required (admin/system only)
+- **Response**:
+```json
+{
+    "status": "success",
+    "message": "Company deleted successfully"
+}
+```
+
+### Get Company with Latest Price
+- **URL**: `/companies/:symbol/with-price`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "symbol": "string",
+        "company_name": "string",
         "priceData": {
             "last_price": "number",
             "date": "string"
-        },
-        "financialResults": [...],
-        "companyIndices": [...],
-        "corporateActions": [...],
-        "boardMeetings": [...],
-        "shareholdingPattern": {...},
-        "securityInfo": {...},
-        "riskMetrics": {...},
-        "deliveryPositions": [...]
+        }
+    }
+}
+```
+
+### Get Company Financial Results
+- **URL**: `/companies/:symbol/financials`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "symbol": "string",
+        "company_name": "string",
+        "financialResults": [
+            {
+                "to_date": "string",
+                "income": "number",
+                "expenditure": "number",
+                "profit_before_tax": "number",
+                "profit_after_tax": "number",
+                "eps": "number"
+            }
+        ]
+    }
+}
+```
+
+### Get Company Indices
+- **URL**: `/companies/:symbol/indices`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "symbol": "string",
+            "index_name": "string"
+        }
+    ]
+}
+```
+
+### Get Corporate Actions
+- **URL**: `/companies/:symbol/corporate-actions`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "ex_date": "string",
+            "purpose": "string"
+        }
+    ]
+}
+```
+
+### Get Board Meetings
+- **URL**: `/companies/:symbol/board-meetings`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "meeting_date": "string",
+            "purpose": "string"
+        }
+    ]
+}
+```
+
+### Get Shareholding Pattern
+- **URL**: `/companies/:symbol/shareholding-patterns`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "period_end_date": "string",
+            "promoter_group_percentage": "number",
+            "public_percentage": "number",
+            "employee_trusts_percentage": "number"
+        }
+    ]
+}
+```
+
+### Get Security Info
+- **URL**: `/companies/:symbol/security-info`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "board_status": "string",
+        "trading_status": "string",
+        "trading_segment": "string",
+        "slb": "string",
+        "class_of_share": "string",
+        "derivatives": "string"
+    }
+}
+```
+
+### Get Risk Metrics
+- **URL**: `/companies/:symbol/risk-metrics`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "impact_cost": "number",
+        "daily_volatility": "number",
+        "annual_volatility": "number",
+        "security_var": "number",
+        "index_var": "number",
+        "var_margin": "number",
+        "extreme_loss_margin": "number",
+        "adhoc_margin": "number",
+        "applicable_margin": "number"
+    }
+}
+```
+
+### Get Delivery Positions
+- **URL**: `/companies/:symbol/delivery-positions`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": [
+        {
+            "date": "string",
+            "quantity_traded": "number",
+            "delivery_quantity": "number",
+            "delivery_percentage": "number"
+        }
+    ]
+}
+```
+
+### Get Comprehensive Data
+- **URL**: `/companies/:symbol/comprehensive`
+- **Method**: `GET`
+- **Auth**: Required
+- **Response**:
+```json
+{
+    "status": "success",
+    "data": {
+        "symbol": "string",
+        "company_name": "string",
+        "priceData": {},
+        "financialResults": [],
+        "securityInfo": {},
+        "riskMetrics": {},
+        "deliveryPositions": []
     }
 }
 ```

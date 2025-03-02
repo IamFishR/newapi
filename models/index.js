@@ -33,12 +33,6 @@ const modelDefinitions = {
     HistoricalExtreme: require('./market/HistoricalExtreme'),
     BidAsk: require('./market/BidAsk'),
 
-    // New sector hierarchy models
-    MacroEconomicSector: require('./stock/MacroEconomicSector'),
-    Sector: require('./stock/Sector'),
-    Industry: require('./stock/Industry'),
-    BasicIndustry: require('./stock/BasicIndustry'),
-
     // Task management models
     Project: require('./task/Project'),
     Sprint: require('./task/Sprint'),

@@ -25,59 +25,6 @@ router.get('/', auth.isAuthenticated, async (req, res, next) => {
     }
 });
 
-// Sector Hierarchy Routes
-router.get('/macro-sectors', auth.isAuthenticated, async (req, res, next) => {
-    try {
-        const sectors = await CompanyService.getMacroEconomicSectors();
-        res.json({
-            status: 'success',
-            data: sectors
-        });
-    } catch (error) {
-        LoggingService.logError(error, { context: 'Get macro economic sectors' });
-        next(error);
-    }
-});
-
-router.get('/macro-sectors/:mesCode/sectors', auth.isAuthenticated, async (req, res, next) => {
-    try {
-        const sectors = await CompanyService.getSectorsByMacroEconomicSector(req.params.mesCode);
-        res.json({
-            status: 'success',
-            data: sectors
-        });
-    } catch (error) {
-        LoggingService.logError(error, { context: 'Get sectors by macro sector' });
-        next(error);
-    }
-});
-
-router.get('/sectors/:sectCode/industries', auth.isAuthenticated, async (req, res, next) => {
-    try {
-        const industries = await CompanyService.getIndustriesBySector(req.params.sectCode);
-        res.json({
-            status: 'success',
-            data: industries
-        });
-    } catch (error) {
-        LoggingService.logError(error, { context: 'Get industries by sector' });
-        next(error);
-    }
-});
-
-router.get('/industries/:indCode/basic-industries', auth.isAuthenticated, async (req, res, next) => {
-    try {
-        const basicIndustries = await CompanyService.getBasicIndustriesByIndustry(req.params.indCode);
-        res.json({
-            status: 'success',
-            data: basicIndustries
-        });
-    } catch (error) {
-        LoggingService.logError(error, { context: 'Get basic industries by industry' });
-        next(error);
-    }
-});
-
 // Get all sectors
 router.get('/sectors', auth.isAuthenticated, async (req, res, next) => {
     try {

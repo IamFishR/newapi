@@ -1,4 +1,6 @@
 const Joi = require('joi');
+const Ajv = require('ajv');
+const ajv = new Ajv({ allErrors: true });
 
 const schemas = {
     user: Joi.object({
@@ -300,14 +302,31 @@ module.exports = {
             throw new Error(`Schema ${schemaName} not found`);
         }
 
-        try {
-            const result = await ajv.validate(schema, data);
-            if (!result) {
-                throw new ValidationError('Validation failed', ajv.errors);
+        // Use Joi for regular schemas and Ajv for task management schemas
+        if (schemas[schemaName]) {
+            try {
+                return await schemas[schemaName].validateAsync(data, { abortEarly: false });
+            } catch (error) {
+                throw {
+                    name: 'ValidationError',
+                    details: error.details.map(err => ({
+                        field: err.path.join('.'),
+                        message: err.message
+                    }))
+                };
+            }
+        } else {
+            const valid = ajv.validate(schema, data);
+            if (!valid) {
+                throw {
+                    name: 'ValidationError',
+                    details: ajv.errors.map(err => ({
+                        field: err.instancePath.slice(1),
+                        message: err.message
+                    }))
+                };
             }
             return data;
-        } catch (error) {
-            throw error;
         }
     }
 };

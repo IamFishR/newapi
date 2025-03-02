@@ -90,23 +90,8 @@ class FinanceService {
             limit,
             include: [{
                 model: Company,
-                attributes: ['company_name', 'sector']
+                attributes: ['company_name']
             }]
-        });
-    }
-
-    async getSectorwisePerformance() {
-        return await FinancialResult.findAll({
-            attributes: [
-                [sequelize.fn('SUM', sequelize.col('profit_after_tax')), 'total_profit'],
-                [sequelize.fn('AVG', sequelize.col('eps')), 'average_eps']
-            ],
-            include: [{
-                model: Company,
-                attributes: ['sector'],
-                group: ['sector']
-            }],
-            group: ['Company.sector']
         });
     }
 
