@@ -10,6 +10,7 @@ const modelDefinitions = {
     Transaction: require('./user/Transaction'),
     PriceData: require('./market/PriceData'),
     MarketDepth: require('./market/MarketDepth'),
+    BudgetCategory: require('./finance/BudgetCategory'),
     FinancialResult: require('./finance/FinancialResult'),
     WatchList: require('./user/WatchList'),
     UserPreference: require('./user/UserPreference'),

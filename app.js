@@ -21,6 +21,7 @@ const monitoringRouter = require('./routes/monitoring');
 const companiesRouter = require('./routes/companies');
 const marketDataRouter = require('./routes/market-data');
 const financialDataRouter = require('./routes/financial-data');
+const financeRouter = require('./routes/finance');
 const shopRouter = require('./routes/shop');
 const tasksRouter = require('./routes/tasks');  // Add tasks router
 const { max } = require('./models/shop/OrderStatusHistory');
@@ -115,6 +116,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/companies', companiesRouter);
 app.use('/api/market-data', marketDataRouter);
 app.use('/api/financial-data', financialDataRouter);
+app.use('/api/finance', financeRouter);
 app.use('/api/monitoring', monitoringRouter);
 app.use('/api/shop', shopRouter);
 app.use('/api/tasks', tasksRouter);  // Register tasks routes
