@@ -1,4 +1,12 @@
-const { FinancialResult, Company } = require('../../models');
+const { 
+    FinancialProfile, 
+    BudgetCategory, 
+    Transaction,
+    User,
+    FinancialResult, 
+    Company 
+} = require('../../models');
+const ValidationError = require('../../utils/ValidationError');
 const { Op } = require('sequelize');
 
 class FinanceService {
@@ -184,6 +192,168 @@ class FinanceService {
                 is_consolidated: isConsolidated
             }
         });
+    }
+
+    async getUserFinancialProfile(userId) {
+        const profile = await FinancialProfile.findOne({
+            where: { userId },
+            include: [{
+                model: User,
+                attributes: ['id', 'email', 'name']
+            }]
+        });
+
+        if (!profile) {
+            return await FinancialProfile.create({ userId });
+        }
+
+        return profile;
+    }
+
+    async updateUserFinancialProfile(userId, data) {
+        const [profile] = await FinancialProfile.upsert({
+            userId,
+            ...data,
+            lastUpdated: new Date()
+        });
+
+        return profile;
+    }
+
+    async getBudgetCategories(userId) {
+        return await BudgetCategory.findAll({
+            where: { userId },
+            order: [['name', 'ASC']]
+        });
+    }
+
+    async createBudgetCategory(userId, data) {
+        const existing = await BudgetCategory.findOne({
+            where: {
+                userId,
+                name: data.name
+            }
+        });
+
+        if (existing) {
+            throw new ValidationError('A category with this name already exists');
+        }
+
+        return await BudgetCategory.create({
+            userId,
+            ...data
+        });
+    }
+
+    async updateBudgetCategory(id, userId, data) {
+        const category = await BudgetCategory.findOne({
+            where: { id, userId }
+        });
+
+        if (!category) {
+            throw new ValidationError('Budget category not found');
+        }
+
+        if (data.name && data.name !== category.name) {
+            const existing = await BudgetCategory.findOne({
+                where: {
+                    userId,
+                    name: data.name,
+                    id: { [Op.ne]: id }
+                }
+            });
+
+            if (existing) {
+                throw new ValidationError('A category with this name already exists');
+            }
+        }
+
+        await category.update(data);
+        return category;
+    }
+
+    async deleteBudgetCategory(id, userId) {
+        const category = await BudgetCategory.findOne({
+            where: { id, userId }
+        });
+
+        if (!category) {
+            throw new ValidationError('Budget category not found');
+        }
+
+        if (category.isDefault) {
+            throw new ValidationError('Cannot delete default budget categories');
+        }
+
+        await category.destroy();
+    }
+
+    async getTransactions(userId, options) {
+        const { startDate, endDate, category, type, limit = 20, offset = 0 } = options;
+        const where = { userId };
+
+        if (startDate) where.date = { [Op.gte]: new Date(startDate) };
+        if (endDate) where.date = { ...where.date, [Op.lte]: new Date(endDate) };
+        if (category) where.categoryId = category;
+        if (type) where.type = type;
+
+        return await Transaction.findAndCountAll({
+            where,
+            include: [{
+                model: BudgetCategory,
+                as: 'category',
+                attributes: ['id', 'name', 'color']
+            }],
+            order: [['date', 'DESC']],
+            limit,
+            offset
+        });
+    }
+
+    async createTransaction(userId, data) {
+        if (data.categoryId) {
+            const category = await BudgetCategory.findOne({
+                where: { id: data.categoryId, userId }
+            });
+
+            if (!category) {
+                throw new ValidationError('Invalid budget category');
+            }
+        }
+
+        return await Transaction.create({
+            userId,
+            ...data
+        });
+    }
+
+    async calculateBudgetMetrics(userId) {
+        const transactions = await Transaction.findAll({
+            where: {
+                userId,
+                date: {
+                    [Op.gte]: new Date(new Date().setDate(1)) // First day of current month
+                }
+            },
+            include: [{
+                model: BudgetCategory,
+                as: 'category'
+            }]
+        });
+
+        const categories = await this.getBudgetCategories(userId);
+        const metrics = {};
+
+        for (const category of categories) {
+            const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+            metrics[category.id] = {
+                budgeted: category.budgetedAmount,
+                spent: categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
+                remaining: category.budgetedAmount - categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
+            };
+        }
+
+        return metrics;
     }
 }
 

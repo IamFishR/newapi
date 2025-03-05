@@ -22,6 +22,11 @@ const companiesRouter = require('./routes/companies');
 const marketDataRouter = require('./routes/market-data');
 const financialDataRouter = require('./routes/financial-data');
 const financeRouter = require('./routes/finance');
+const debtRouter = require('./routes/debt');
+const goalsRouter = require('./routes/goals');
+const investmentRouter = require('./routes/investments');
+const networthRouter = require('./routes/networth');
+const taxRouter = require('./routes/tax');
 const shopRouter = require('./routes/shop');
 const tasksRouter = require('./routes/tasks');  // Add tasks router
 const { max } = require('./models/shop/OrderStatusHistory');
@@ -116,10 +121,17 @@ app.use('/api/users', usersRouter);
 app.use('/api/companies', companiesRouter);
 app.use('/api/market-data', marketDataRouter);
 app.use('/api/financial-data', financialDataRouter);
-app.use('/api/finance', financeRouter);
 app.use('/api/monitoring', monitoringRouter);
 app.use('/api/shop', shopRouter);
-app.use('/api/tasks', tasksRouter);  // Register tasks routes
+app.use('/api/tasks', tasksRouter);
+
+// Finance routes
+app.use('/api/finance', financeRouter);
+app.use('/api/finance', debtRouter);
+app.use('/api/finance', goalsRouter);
+app.use('/api/finance', investmentRouter);
+app.use('/api/finance', networthRouter);
+app.use('/api/finance', taxRouter);
 
 // Error handling middleware
 app.use(errorMiddleware);

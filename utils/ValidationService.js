@@ -1,6 +1,8 @@
 const Joi = require('joi');
 const Ajv = require('ajv');
 const ajv = new Ajv({ allErrors: true });
+const financeSchemas = require('./validationSchemas/financeSchemas');
+const ValidationError = require('../utils/ValidationError');
 
 const schemas = {
     user: Joi.object({
@@ -260,18 +262,31 @@ const taskManagementSchemas = {
 };
 
 class ValidationService {
-    static async validate(schema, data) {
-        try {
-            return await schemas[schema].validateAsync(data, { abortEarly: false });
-        } catch (error) {
-            throw {
-                name: 'ValidationError',
-                details: error.details.map(err => ({
-                    field: err.path.join('.'),
-                    message: err.message
-                }))
-            };
+    static async validate(schemaName, data) {
+        const schema = this.getSchema(schemaName);
+        if (!schema) {
+            throw new ValidationError(`No validation schema found for ${schemaName}`);
         }
+
+        try {
+            return await schema.validateAsync(data, {
+                abortEarly: false,
+                stripUnknown: true
+            });
+        } catch (error) {
+            throw new ValidationError(error.details.map(d => d.message).join(', '));
+        }
+    }
+
+    static getSchema(name) {
+        // Finance schemas
+        if (financeSchemas[name]) {
+            return financeSchemas[name];
+        }
+
+        // ... other schema categories ...
+
+        return null;
     }
 
     static sanitizeUserData(userData) {
@@ -289,44 +304,4 @@ class ValidationService {
     }
 }
 
-module.exports = {
-    ValidationService,
-    taskManagementSchemas,
-    validate: async (schemaName, data) => {
-        const schema = {
-            ...schemas,
-            ...taskManagementSchemas
-        }[schemaName];
-
-        if (!schema) {
-            throw new Error(`Schema ${schemaName} not found`);
-        }
-
-        // Use Joi for regular schemas and Ajv for task management schemas
-        if (schemas[schemaName]) {
-            try {
-                return await schemas[schemaName].validateAsync(data, { abortEarly: false });
-            } catch (error) {
-                throw {
-                    name: 'ValidationError',
-                    details: error.details.map(err => ({
-                        field: err.path.join('.'),
-                        message: err.message
-                    }))
-                };
-            }
-        } else {
-            const valid = ajv.validate(schema, data);
-            if (!valid) {
-                throw {
-                    name: 'ValidationError',
-                    details: ajv.errors.map(err => ({
-                        field: err.instancePath.slice(1),
-                        message: err.message
-                    }))
-                };
-            }
-            return data;
-        }
-    }
-};
+module.exports = ValidationService;
