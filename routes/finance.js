@@ -81,6 +81,26 @@ router.post('/budget/transactions', auth.isAuthenticated, async (req, res, next)
     }
 });
 
+router.get('/budget/trends', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const trends = await FinanceService.getBudgetTrends(req.user.id, req.query.range);
+        res.json({ status: 'success', data: trends });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get budget trends' });
+        res.status(500).json({ error: 'Failed to fetch budget trends data' });
+    }
+});
+
+router.get('/budget/comparison', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const comparison = await FinanceService.getBudgetComparison(req.user.id, req.query.startDate, req.query.endDate);
+        res.json({ status: 'success', data: comparison });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get budget comparison' });
+        res.status(500).json({ error: 'Failed to fetch budget comparison data' });
+    }
+});
+
 // Debt Management Routes
 router.get('/debt', auth.isAuthenticated, async (req, res, next) => {
     try {

@@ -355,6 +355,177 @@ class FinanceService {
 
         return metrics;
     }
+
+    async getBudgetTrends(userId, range) {
+        try {
+            // Convert range to date
+            const endDate = new Date();
+            const startDate = this.calculateStartDate(range);
+
+            // Fetch transactions within the date range
+            const transactions = await Transaction.findAll({
+                where: {
+                    userId,
+                    transaction_date: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                },
+                include: [
+                    {
+                        model: BudgetCategory,
+                        as: 'category',
+                        attributes: ['id', 'name', 'color']
+                    }
+                ],
+                order: [['transaction_date', 'ASC']]
+            });
+
+            // Group transactions by month and category
+            const monthlyData = this.groupTransactionsByMonth(transactions);
+
+            // Calculate trendline data
+            const trendData = this.calculateTrendData(transactions, startDate, endDate);
+
+            return {
+                monthly: monthlyData,
+                trend: trendData
+            };
+        } catch (error) {
+            console.error('Error fetching budget trends:', error);
+            throw new Error('Failed to fetch budget trends data');
+        }
+    }
+
+    async getBudgetComparison(userId, startDate, endDate) {
+        try {
+            // Fetch all categories
+            const categories = await BudgetCategory.findAll({
+                where: { userId }
+            });
+
+            // Fetch transactions for the specified period
+            const transactions = await Transaction.findAll({
+                where: {
+                    userId,
+                    transaction_date: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                },
+                include: [
+                    {
+                        model: BudgetCategory,
+                        as: 'category'
+                    }
+                ]
+            });
+
+            // Calculate comparison data
+            const comparisonData = this.calculateComparisonData(categories, transactions);
+
+            return comparisonData;
+        } catch (error) {
+            console.error('Error fetching budget comparison:', error);
+            throw new Error('Failed to fetch budget comparison data');
+        }
+    }
+
+    calculateStartDate(range) {
+        const now = new Date();
+        switch (range) {
+            case '1M':
+                return new Date(now.setMonth(now.getMonth() - 1));
+            case '3M':
+                return new Date(now.setMonth(now.getMonth() - 3));
+            case '6M':
+                return new Date(now.setMonth(now.getMonth() - 6));
+            case '1Y':
+                return new Date(now.setFullYear(now.getFullYear() - 1));
+            default:
+                return new Date(now.setMonth(now.getMonth() - 1)); // Default to 1M
+        }
+    }
+
+    groupTransactionsByMonth(transactions) {
+        const monthlyData = {};
+
+        transactions.forEach(transaction => {
+            const date = new Date(transaction.transaction_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!monthlyData[monthKey]) {
+                monthlyData[monthKey] = {};
+            }
+
+            const categoryId = transaction.category?.id || 'uncategorized';
+            const categoryName = transaction.category?.name || 'Uncategorized';
+
+            if (!monthlyData[monthKey][categoryId]) {
+                monthlyData[monthKey][categoryId] = {
+                    name: categoryName,
+                    color: transaction.category?.color || '#CCCCCC',
+                    total: 0
+                };
+            }
+
+            monthlyData[monthKey][categoryId].total += transaction.amount;
+        });
+
+        return monthlyData;
+    }
+
+    calculateTrendData(transactions, startDate, endDate) {
+        const incomeByDay = {};
+        const expensesByDay = {};
+
+        // Initialize data points for each day in range
+        const dayMillis = 24 * 60 * 60 * 1000;
+        for (let d = new Date(startDate); d <= endDate; d = new Date(d.getTime() + dayMillis)) {
+            const dateKey = d.toISOString().split('T')[0];
+            incomeByDay[dateKey] = 0;
+            expensesByDay[dateKey] = 0;
+        }
+
+        // Populate with actual data
+        transactions.forEach(transaction => {
+            const dateKey = new Date(transaction.transaction_date).toISOString().split('T')[0];
+            if (transaction.type === 'income') {
+                incomeByDay[dateKey] = (incomeByDay[dateKey] || 0) + transaction.amount;
+            } else {
+                expensesByDay[dateKey] = (expensesByDay[dateKey] || 0) + transaction.amount;
+            }
+        });
+
+        // Convert to arrays for charting
+        const income = Object.keys(incomeByDay).map(date => ({
+            date,
+            amount: incomeByDay[date]
+        }));
+
+        const expenses = Object.keys(expensesByDay).map(date => ({
+            date,
+            amount: expensesByDay[date]
+        }));
+
+        return { income, expenses };
+    }
+
+    calculateComparisonData(categories, transactions) {
+        const comparisonData = {};
+
+        categories.forEach(category => {
+            const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+            const totalSpent = categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+
+            comparisonData[category.id] = {
+                name: category.name,
+                budgeted: category.budgetedAmount,
+                spent: totalSpent,
+                remaining: category.budgetedAmount - totalSpent
+            };
+        });
+
+        return comparisonData;
+    }
 }
 
 module.exports = new FinanceService();
