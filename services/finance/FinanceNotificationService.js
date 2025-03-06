@@ -7,6 +7,7 @@ const {
     TaxProfile
 } = require('../../models/finance');
 const NotificationService = require('../notifications/NotificationService');
+const GoalsService = require('./GoalsService');
 
 class FinanceNotificationService {
     static async checkAndSendNotifications() {
@@ -93,36 +94,28 @@ class FinanceNotificationService {
     }
 
     static async checkGoalDeadlines() {
-        const upcomingDeadlines = await FinancialGoal.findAll({
-            where: {
-                status: 'active',
-                targetDate: {
-                    [Op.between]: [
-                        new Date(),
-                        new Date(new Date().setDate(new Date().getDate() + 30))
-                    ]
-                }
-            }
+        const goals = await GoalsService.getFinancialGoals();
+        const upcomingDeadlines = goals.filter(goal => {
+            const daysToDeadline = Math.ceil(
+                (new Date(goal.targetDate) - new Date()) / (1000 * 60 * 60 * 24)
+            );
+            return goal.status === 'active' && daysToDeadline <= 30 && daysToDeadline > 0;
         });
 
         for (const goal of upcomingDeadlines) {
-            const daysRemaining = Math.ceil(
-                (new Date(goal.targetDate) - new Date()) / (1000 * 60 * 60 * 24)
-            );
-
-            const progress = (goal.currentAmount / goal.targetAmount) * 100;
-            const remainingAmount = goal.targetAmount - goal.currentAmount;
-
+            const analytics = await GoalsService.calculateRequiredContributions(goal.userId, goal.id);
+            
             await NotificationService.sendNotification({
                 userId: goal.userId,
                 type: 'goal_deadline',
                 title: 'Financial Goal Deadline Approaching',
-                message: `${goal.name} deadline is in ${daysRemaining} days`,
+                message: `${goal.name} deadline is in ${analytics.daysToTarget} days`,
                 data: {
                     goalId: goal.id,
-                    daysRemaining,
-                    progress,
-                    remainingAmount
+                    daysRemaining: analytics.daysToTarget,
+                    progress: analytics.currentProgress,
+                    remainingAmount: analytics.remaining,
+                    requiredMonthly: analytics.requiredMonthly
                 }
             });
         }

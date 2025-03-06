@@ -1,162 +1,157 @@
-const { BudgetCategory, Transaction } = require('../../models/finance/budget');
+const { BudgetCategory, Transaction } = require('../../models');
+const ValidationError = require('../../utils/ValidationError');
 const { Op } = require('sequelize');
-const { v4: uuidv4 } = require('uuid');
-const sequelize = require('sequelize');
+const FinanceErrorHandler = require('./FinanceErrorHandler');
+const TransactionService = require('./TransactionService');
 
 class BudgetService {
-    /**
-     * Get all active budget categories
-     */
-    static async getBudgetCategories() {
+    async getBudgetCategories(userId) {
         try {
-            const categories = await BudgetCategory.findAll({
-                where: {
-                    deleted_at: null
-                },
+            return await BudgetCategory.findAll({
+                where: { userId },
                 order: [['name', 'ASC']]
             });
-            
-            return categories;
         } catch (error) {
-            console.error('Error fetching budget categories:', error);
-            throw new Error('Failed to fetch budget categories');
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_get_categories');
         }
     }
 
-    /**
-     * Get budget trends for a specific time range
-     * @param {string} range Time range (e.g. '1W', '1M', '3M', '6M', '1Y')
-     * @param {number} userId User ID
-     */
-    static async getBudgetTrends(range, userId) {
+    async createBudgetCategory(userId, data) {
         try {
-            // Convert range to date
+            const existing = await BudgetCategory.findOne({
+                where: {
+                    userId,
+                    name: data.name
+                }
+            });
+
+            if (existing) {
+                throw new ValidationError('A category with this name already exists');
+            }
+
+            return await BudgetCategory.create({
+                userId,
+                ...data
+            });
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_create_category');
+        }
+    }
+
+    async updateBudgetCategory(id, userId, data) {
+        try {
+            const category = await BudgetCategory.findOne({
+                where: { id, userId }
+            });
+
+            if (!category) {
+                throw new ValidationError('Budget category not found');
+            }
+
+            if (data.name && data.name !== category.name) {
+                const existing = await BudgetCategory.findOne({
+                    where: {
+                        userId,
+                        name: data.name,
+                        id: { [Op.ne]: id }
+                    }
+                });
+
+                if (existing) {
+                    throw new ValidationError('A category with this name already exists');
+                }
+            }
+
+            await category.update(data);
+            return category;
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_update_category');
+        }
+    }
+
+    async deleteBudgetCategory(id, userId) {
+        try {
+            const category = await BudgetCategory.findOne({
+                where: { id, userId }
+            });
+
+            if (!category) {
+                throw new ValidationError('Budget category not found');
+            }
+
+            if (category.isDefault) {
+                throw new ValidationError('Cannot delete default budget categories');
+            }
+
+            await category.destroy();
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_delete_category');
+        }
+    }
+
+    async calculateBudgetMetrics(userId) {
+        try {
+            const transactions = await TransactionService.getTransactionsByDateRange(
+                userId,
+                new Date(new Date().setDate(1)), // First day of current month
+                new Date()
+            );
+
+            const categories = await this.getBudgetCategories(userId);
+            const metrics = {};
+
+            for (const category of categories) {
+                const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+                metrics[category.id] = {
+                    budgeted: category.budgetedAmount,
+                    spent: categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
+                    remaining: category.budgetedAmount - categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
+                };
+            }
+
+            return metrics;
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_calculate_metrics');
+        }
+    }
+
+    async getBudgetTrends(userId, range) {
+        try {
             const endDate = new Date();
             const startDate = this.calculateStartDate(range);
-            
-            // Fetch transactions within the date range
-            const transactions = await Transaction.findAll({
-                where: {
-                    user_id: userId,
-                    transaction_date: {
-                        [Op.between]: [startDate, endDate]
-                    },
-                    deleted_at: null
-                },
-                include: [
-                    {
-                        model: BudgetCategory,
-                        as: 'category',
-                        attributes: ['id', 'name', 'color']
-                    }
-                ],
-                order: [['transaction_date', 'ASC']]
-            });
-            
+
+            const transactions = await TransactionService.getTransactionsByDateRange(userId, startDate, endDate);
+
             // Group transactions by month and category
             const monthlyData = this.groupTransactionsByMonth(transactions);
-            
+
             // Calculate trendline data
             const trendData = this.calculateTrendData(transactions, startDate, endDate);
-            
+
             return {
                 monthly: monthlyData,
                 trend: trendData
             };
         } catch (error) {
-            console.error('Error fetching budget trends:', error);
-            throw new Error('Failed to fetch budget trends data');
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_get_trends');
         }
     }
 
-    /**
-     * Get budget comparison between actual spending and budget targets
-     * @param {number} userId User ID
-     */
-    static async getBudgetComparison(userId) {
+    async getBudgetComparison(userId, startDate, endDate) {
         try {
-            // Get current month boundaries
-            const now = new Date();
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-            
-            // Fetch all categories
-            const categories = await BudgetCategory.findAll({
-                where: { deleted_at: null }
-            });
-            
-            // Fetch transactions for current month
-            const transactions = await Transaction.findAll({
-                where: {
-                    user_id: userId,
-                    transaction_date: {
-                        [Op.between]: [startOfMonth, endOfMonth]
-                    },
-                    deleted_at: null
-                },
-                include: [
-                    {
-                        model: BudgetCategory,
-                        as: 'category'
-                    }
-                ]
-            });
-            
-            // Calculate spending per category
-            const categorySpending = transactions.reduce((acc, transaction) => {
-                const categoryId = transaction.category?.id || 'uncategorized';
-                acc[categoryId] = (acc[categoryId] || 0) + transaction.amount;
-                return acc;
-            }, {});
-            
-            // For now, return dummy budget targets until we have a proper budget setup feature
-            // In a real app, you would fetch this from a budget table
-            const dummyBudgetTargets = {
-                housing: 1500,
-                utilities: 300,
-                transportation: 250,
-                groceries: 500,
-                entertainment: 200,
-                healthcare: 150,
-                other: 300
-            };
-            
-            // Prepare comparison data with actual vs budget
-            const comparisonData = categories.map(category => {
-                const categoryName = category.name.toLowerCase();
-                const actualSpending = categorySpending[category.id] || 0;
-                const budgetTarget = dummyBudgetTargets[categoryName] || 0;
-                const variance = budgetTarget - actualSpending;
-                const percentUsed = budgetTarget > 0 ? (actualSpending / budgetTarget) * 100 : 0;
-                
-                return {
-                    categoryId: category.id,
-                    categoryName: category.name,
-                    color: category.color,
-                    actualSpending,
-                    budgetTarget,
-                    variance,
-                    percentUsed: Math.min(percentUsed, 100) // Cap at 100%
-                };
-            });
-            
-            return comparisonData;
+            const categories = await this.getBudgetCategories(userId);
+            const transactions = await TransactionService.getTransactionsByDateRange(userId, startDate, endDate);
+
+            return this.calculateComparisonData(categories, transactions);
         } catch (error) {
-            console.error('Error fetching budget comparison:', error);
-            throw new Error('Failed to fetch budget comparison data');
+            FinanceErrorHandler.handleFinancialOperationError(error, 'budget_get_comparison');
         }
     }
 
-    /**
-     * Helper to convert time range to start date
-     * @param {string} range Time range
-     * @returns {Date} Start date
-     */
-    static calculateStartDate(range) {
+    // Utility methods
+    calculateStartDate(range) {
         const now = new Date();
         switch (range) {
-            case '1W':
-                return new Date(now.setDate(now.getDate() - 7));
             case '1M':
                 return new Date(now.setMonth(now.getMonth() - 1));
             case '3M':
@@ -170,25 +165,20 @@ class BudgetService {
         }
     }
 
-    /**
-     * Group transactions by month and category
-     * @param {Array} transactions List of transactions
-     * @returns {Object} Grouped data
-     */
-    static groupTransactionsByMonth(transactions) {
+    groupTransactionsByMonth(transactions) {
         const monthlyData = {};
-        
+
         transactions.forEach(transaction => {
-            const date = new Date(transaction.transaction_date);
+            const date = new Date(transaction.date);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            
+
             if (!monthlyData[monthKey]) {
                 monthlyData[monthKey] = {};
             }
-            
+
             const categoryId = transaction.category?.id || 'uncategorized';
             const categoryName = transaction.category?.name || 'Uncategorized';
-            
+
             if (!monthlyData[monthKey][categoryId]) {
                 monthlyData[monthKey][categoryId] = {
                     name: categoryName,
@@ -196,24 +186,17 @@ class BudgetService {
                     total: 0
                 };
             }
-            
-            monthlyData[monthKey][categoryId].total += transaction.amount;
+
+            monthlyData[monthKey][categoryId].total += Number(transaction.amount);
         });
-        
+
         return monthlyData;
     }
 
-    /**
-     * Calculate trend data for income vs expenses
-     * @param {Array} transactions List of transactions
-     * @param {Date} startDate Start date
-     * @param {Date} endDate End date
-     * @returns {Object} Trend data
-     */
-    static calculateTrendData(transactions, startDate, endDate) {
+    calculateTrendData(transactions, startDate, endDate) {
         const incomeByDay = {};
         const expensesByDay = {};
-        
+
         // Initialize data points for each day in range
         const dayMillis = 24 * 60 * 60 * 1000;
         for (let d = new Date(startDate); d <= endDate; d = new Date(d.getTime() + dayMillis)) {
@@ -221,30 +204,46 @@ class BudgetService {
             incomeByDay[dateKey] = 0;
             expensesByDay[dateKey] = 0;
         }
-        
+
         // Populate with actual data
         transactions.forEach(transaction => {
-            const dateKey = new Date(transaction.transaction_date).toISOString().split('T')[0];
+            const dateKey = new Date(transaction.date).toISOString().split('T')[0];
             if (transaction.type === 'income') {
-                incomeByDay[dateKey] = (incomeByDay[dateKey] || 0) + transaction.amount;
+                incomeByDay[dateKey] = (incomeByDay[dateKey] || 0) + Number(transaction.amount);
             } else {
-                expensesByDay[dateKey] = (expensesByDay[dateKey] || 0) + transaction.amount;
+                expensesByDay[dateKey] = (expensesByDay[dateKey] || 0) + Number(transaction.amount);
             }
         });
-        
-        // Convert to arrays for charting
-        const income = Object.keys(incomeByDay).map(date => ({
-            date,
-            amount: incomeByDay[date]
-        }));
-        
-        const expenses = Object.keys(expensesByDay).map(date => ({
-            date,
-            amount: expensesByDay[date]
-        }));
-        
-        return { income, expenses };
+
+        return {
+            income: Object.keys(incomeByDay).map(date => ({
+                date,
+                amount: incomeByDay[date]
+            })),
+            expenses: Object.keys(expensesByDay).map(date => ({
+                date,
+                amount: expensesByDay[date]
+            }))
+        };
+    }
+
+    calculateComparisonData(categories, transactions) {
+        const comparisonData = {};
+
+        categories.forEach(category => {
+            const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+            const totalSpent = categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+
+            comparisonData[category.id] = {
+                name: category.name,
+                budgeted: category.budgetedAmount,
+                spent: totalSpent,
+                remaining: category.budgetedAmount - totalSpent
+            };
+        });
+
+        return comparisonData;
     }
 }
 
-module.exports = BudgetService;
+module.exports = new BudgetService();
