@@ -133,7 +133,7 @@ class FinanceService {
     // Financial profile management
     async getUserFinancialProfile(userId) {
         const profile = await FinancialProfile.findOne({
-            where: { userId },
+            where: { user_id: userId },
             include: [{
                 model: User,
                 attributes: ['id', 'email', 'name']
@@ -141,7 +141,7 @@ class FinanceService {
         });
 
         if (!profile) {
-            return await FinancialProfile.create({ userId });
+            return await FinancialProfile.create({ user_id: userId });
         }
 
         return profile;
@@ -149,9 +149,9 @@ class FinanceService {
 
     async updateUserFinancialProfile(userId, data) {
         const [profile] = await FinancialProfile.upsert({
-            userId,
+            user_id: userId,
             ...data,
-            lastUpdated: new Date()
+            last_updated: new Date()
         });
 
         return profile;
@@ -159,7 +159,7 @@ class FinanceService {
 
     async getFinancialProfile(userId) {
         return await FinancialProfile.findOne({
-            where: { userId }
+            where: { user_id: userId }
         });
     }
 

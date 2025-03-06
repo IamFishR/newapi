@@ -15,8 +15,10 @@ const loggingMiddleware = (req, res, next) => {
         // Call original end function
         originalEnd.call(this, chunk, encoding);
 
-        // Log the request and response
-        LoggingService.logRequest(req, res, responseTime);
+        // Only log if there was an error (status >= 400)
+        if (res.statusCode >= 400) {
+            LoggingService.logRequest(req, res, responseTime);
+        }
     };
 
     next();

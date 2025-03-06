@@ -3,7 +3,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class FinancialProfile extends Model {
         static associate(models) {
-            FinancialProfile.belongsTo(models.User, { foreignKey: 'userId' });
+            FinancialProfile.belongsTo(models.User, { foreignKey: 'user_id' });
         }
     }
 
@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
-        userId: {
+        user_id: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -21,22 +21,22 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id'
             }
         },
-        monthlyIncome: {
+        monthly_income: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false,
             defaultValue: 0
         },
-        monthlySavingsGoal: {
+        monthly_savings_goal: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false,
             defaultValue: 0
         },
-        currentSavings: {
+        current_savings: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false,
             defaultValue: 0
         },
-        monthlyExpenses: {
+        monthly_expenses: {
             type: DataTypes.JSON,
             allowNull: false,
             defaultValue: {
@@ -49,16 +49,16 @@ module.exports = (sequelize, DataTypes) => {
                 other: 0
             }
         },
-        investmentProfile: {
+        investment_profile: {
             type: DataTypes.JSON,
             allowNull: false,
             defaultValue: {
-                currentInvestments: 0,
-                monthlyInvestmentGoal: 0,
-                riskTolerance: 'medium'
+                current_investments: 0,
+                monthly_investment_goal: 0,
+                risk_tolerance: 'medium'
             }
         },
-        lastUpdated: {
+        last_updated: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW
         }
@@ -68,10 +68,11 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'financial_profiles',
         timestamps: true,
         paranoid: true,
+        underscored: true,
         indexes: [
             {
                 unique: true,
-                fields: ['userId']
+                fields: ['user_id']
             }
         ]
     });
