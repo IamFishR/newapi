@@ -60,7 +60,12 @@ class UserService {
 
     // Read
     async getUser(id) {
-        return await User.findByPk(id);
+        const user = await User.findByPk(id, {
+            attributes: {
+                exclude: ['password']
+            }
+        });
+        return user;
     }
 
     async getUserByEmail(email) {

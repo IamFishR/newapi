@@ -5,7 +5,7 @@ const {
     User,
     FinancialResult, 
     Company 
-} = require('../../models');
+} = require('../../models/finance');
 const ValidationError = require('../../utils/ValidationError');
 const { Op } = require('sequelize');
 const FinanceErrorHandler = require('./FinanceErrorHandler');
@@ -155,6 +155,12 @@ class FinanceService {
         });
 
         return profile;
+    }
+
+    async getFinancialProfile(userId) {
+        return await FinancialProfile.findOne({
+            where: { userId }
+        });
     }
 
     // Budget category management

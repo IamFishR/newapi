@@ -1,0 +1,305 @@
+{
+  "info": {
+    "name": "Finance API",
+    "description": "Collection for personal finance management endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Financial Profile",
+      "item": [
+        {
+          "name": "Get Financial Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Financial Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "profile"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"monthlyIncome\": 5000,\n    \"monthlySavingsGoal\": 1000,\n    \"currentSavings\": 15000,\n    \"monthlyExpenses\": {\n        \"housing\": 1500,\n        \"utilities\": 200,\n        \"transportation\": 300,\n        \"groceries\": 400,\n        \"healthcare\": 200,\n        \"entertainment\": 300,\n        \"other\": 100\n    },\n    \"investmentProfile\": {\n        \"currentInvestments\": 50000,\n        \"monthlyInvestmentGoal\": 500,\n        \"riskTolerance\": \"medium\"\n    }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Budget Management",
+      "item": [
+        {
+          "name": "Get Budget Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/budget/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "budget", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Add Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/budget/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "budget", "transactions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"amount\": 50.00,\n    \"categoryId\": \"category_id\",\n    \"description\": \"Grocery shopping\",\n    \"date\": \"2024-03-06\",\n    \"type\": \"expense\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Budget Trends",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/budget/trends?range=1Y",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "budget", "trends"],
+              "query": [
+                {
+                  "key": "range",
+                  "value": "1Y"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Investment Management",
+      "item": [
+        {
+          "name": "Get Investment Portfolio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/investments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "investments"]
+            }
+          }
+        },
+        {
+          "name": "Add Investment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/investments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "investments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"symbol\": \"AAPL\",\n    \"shares\": 10,\n    \"purchasePrice\": 150.00,\n    \"type\": \"stock\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Investment Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/investments/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "investments", "analytics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Net Worth Tracking",
+      "item": [
+        {
+          "name": "Get Net Worth History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/networth/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "networth", "history"]
+            }
+          }
+        },
+        {
+          "name": "Add Asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/networth/assets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "networth", "assets"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Primary Residence\",\n    \"type\": \"real_estate\",\n    \"value\": 500000,\n    \"purchaseDate\": \"2020-01-15\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Net Worth Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/networth/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "networth", "analytics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tax Planning",
+      "item": [
+        {
+          "name": "Get Tax Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/tax/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "tax", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Tax Estimates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/finance/tax/estimates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "finance", "tax", "estimates"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_auth_token_here",
+      "type": "string"
+    }
+  ]
+}

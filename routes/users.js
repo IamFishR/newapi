@@ -53,13 +53,17 @@ router.post('/authenticate', authLimiter, async (req, res, next) => {
         const { email, password } = req.body;
         const { user, session } = await UserService.loginUser(email, password, req);
         
+        // Get user preferences after successful authentication
+        const preferences = await PreferenceService.getPreferences(user.id);
+        
         res.cookie('exapis_session', session.session_token, COOKIE_OPTIONS);
         res.json({
             user: {
                 id: user.id,
                 name: user.username,
                 email: user.email
-            },            
+            },
+            preferences           
         });
     } catch (error) {
         if (error.name === 'AuthenticationError') {
@@ -68,6 +72,18 @@ router.post('/authenticate', authLimiter, async (req, res, next) => {
                 message: 'Authentication failed',
             });
         }
+        // invalid credentials
+        if (error.name === 'InvalidCredentialsError') {
+            return res.status(401).json({
+                status: 'fail',
+                message: 'Invalid credentials',
+            });
+        }
+        // handle other errors
+        res.status(500).json({
+            status: 'error',
+            message: error.message
+        });
         next(error);
     }
 });
@@ -128,6 +144,29 @@ router.put('/preferences', auth.isAuthenticated, async (req, res, next) => {
         const preferences = await PreferenceService.createOrUpdatePreferences(req.user.id, validatedData);
         res.json(preferences);
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            const errors = error.message.split(', ').map(err => {
+                // Extract field name and specific error type
+                const fieldMatch = err.match(/\"([^\"]+)\"/);
+                const field = fieldMatch ? fieldMatch[1] : 'unknown';
+                
+                // Create a user-friendly error message with allowed values if it's an enum error
+                let message = err;
+                if (field === 'theme' && err.includes('valid')) {
+                    message = 'Theme must be either "light" or "dark"';
+                } else if (field === 'language' && err.includes('valid')) {
+                    message = 'Language must be one of: en, es, fr, de';
+                }
+
+                return { field, message };
+            });
+
+            return res.status(400).json({
+                status: 'fail',
+                message: 'Validation Error',
+                errors
+            });
+        }
         next(error);
     }
 });
@@ -165,6 +204,22 @@ router.get('/notifications', auth.isAuthenticated, async (req, res) => {
         res.json(notifications);
     } catch (error) {
         LoggingService.logError(error, { context: 'Get user notifications' });
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/notifications/unread-count', auth.isAuthenticated, async (req, res) => {
+    try {
+        const count = await Notification.count({
+            where: {
+                user_id: req.user.id,
+                is_read: false
+            }
+        });
+        
+        res.json({ unread_count: count });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get unread notification count' });
         res.status(500).json({ error: error.message });
     }
 });
@@ -245,22 +300,6 @@ router.delete('/notifications/:id', auth.isAuthenticated, async (req, res) => {
         res.json({ status: 'success', message: 'Notification deleted' });
     } catch (error) {
         LoggingService.logError(error, { context: 'Delete notification' });
-        res.status(500).json({ error: error.message });
-    }
-});
-
-router.get('/notifications/unread-count', auth.isAuthenticated, async (req, res) => {
-    try {
-        const count = await Notification.count({
-            where: {
-                user_id: req.user.id,
-                is_read: false
-            }
-        });
-        
-        res.json({ unread_count: count });
-    } catch (error) {
-        LoggingService.logError(error, { context: 'Get unread notification count' });
         res.status(500).json({ error: error.message });
     }
 });

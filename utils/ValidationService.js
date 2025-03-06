@@ -279,13 +279,17 @@ class ValidationService {
     }
 
     static getSchema(name) {
-        // Finance schemas
+        // First check main schemas
+        if (schemas[name]) {
+            return schemas[name];
+        }
+
+        // Then check finance schemas
         if (financeSchemas[name]) {
             return financeSchemas[name];
         }
 
-        // ... other schema categories ...
-
+        // No schema found
         return null;
     }
 
