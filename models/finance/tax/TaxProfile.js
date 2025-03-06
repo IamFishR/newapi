@@ -8,7 +8,8 @@ class TaxProfile extends Model {
             onDelete: 'CASCADE'
         });
         this.hasMany(models.TaxDeduction, {
-            foreignKey: 'tax_profile_id'
+            foreignKey: 'tax_profile_id',
+            as: 'deductions'
         });
     }
 }

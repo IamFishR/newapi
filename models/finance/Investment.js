@@ -3,9 +3,9 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class Investment extends Model {
         static associate(models) {
-            Investment.belongsTo(models.User, { foreignKey: 'userId' });
+            Investment.belongsTo(models.User, { foreignKey: 'user_id' });
             Investment.hasMany(models.InvestmentTransaction, {
-                foreignKey: 'investmentId',
+                foreignKey: 'investment_id',
                 as: 'transactions'
             });
         }
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
-        userId: {
+        user_id: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -34,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             defaultValue: 0
         },
-        averageCost: {
+        average_cost: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false,
             defaultValue: 0
@@ -43,15 +43,15 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.ENUM('stock', 'etf', 'mutual_fund', 'crypto', 'other'),
             allowNull: false
         },
-        purchaseDate: {
+        purchase_date: {
             type: DataTypes.DATE,
             allowNull: false
         },
-        currentPrice: {
+        current_price: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: true
         },
-        lastPriceUpdate: {
+        last_price_update: {
             type: DataTypes.DATE,
             allowNull: true
         },
@@ -65,15 +65,14 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'investments',
         timestamps: true,
         paranoid: true,
+        underscored: true,
         indexes: [
             {
-                fields: ['userId']
+                unique: true,
+                fields: ['user_id', 'symbol']
             },
             {
-                fields: ['symbol']
-            },
-            {
-                fields: ['type']
+                fields: ['user_id', 'type']
             }
         ]
     });

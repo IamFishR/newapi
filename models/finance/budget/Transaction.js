@@ -8,7 +8,8 @@ class Transaction extends Model {
             onDelete: 'CASCADE'
         });
         this.belongsTo(models.BudgetCategory, {
-            foreignKey: 'category_id'
+            foreignKey: 'category_id',
+            as: 'category'
         });
     }
 }
@@ -69,15 +70,7 @@ Transaction.init({
     tableName: 'transactions',
     timestamps: true,
     paranoid: true,
-    underscored: true,
-    indexes: [
-        {
-            fields: ['user_id', 'created_at']
-        },
-        {
-            fields: ['category_id', 'date']
-        }
-    ]
+    underscored: true
 });
 
 module.exports = Transaction;

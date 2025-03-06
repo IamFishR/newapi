@@ -1,4 +1,4 @@
-const { Transaction, BudgetCategory } = require('../../models');
+const { Transaction, BudgetCategory } = require('../../models/finance');
 const ValidationError = require('../../utils/ValidationError');
 const { Op } = require('sequelize');
 const FinanceErrorHandler = require('./FinanceErrorHandler');
@@ -7,11 +7,11 @@ class TransactionService {
     async getTransactions(userId, options) {
         try {
             const { startDate, endDate, category, type, limit = 20, offset = 0 } = options;
-            const where = { userId };
+            const where = { user_id: userId };
 
             if (startDate) where.date = { [Op.gte]: new Date(startDate) };
             if (endDate) where.date = { ...where.date, [Op.lte]: new Date(endDate) };
-            if (category) where.categoryId = category;
+            if (category) where.category_id = category;
             if (type) where.type = type;
 
             return await Transaction.findAndCountAll({
@@ -32,9 +32,9 @@ class TransactionService {
 
     async createTransaction(userId, data) {
         try {
-            if (data.categoryId) {
+            if (data.category_id) {
                 const category = await BudgetCategory.findOne({
-                    where: { id: data.categoryId, userId }
+                    where: { id: data.category_id, user_id: userId }
                 });
 
                 if (!category) {
@@ -43,7 +43,7 @@ class TransactionService {
             }
 
             return await Transaction.create({
-                userId,
+                user_id: userId,
                 ...data
             });
         } catch (error) {
@@ -55,7 +55,7 @@ class TransactionService {
         try {
             return await Transaction.findAll({
                 where: {
-                    userId,
+                    user_id: userId,
                     date: {
                         [Op.between]: [startDate, endDate]
                     }
@@ -75,8 +75,8 @@ class TransactionService {
         try {
             return await Transaction.findAll({
                 where: {
-                    userId,
-                    categoryId,
+                    user_id: userId,
+                    category_id: categoryId,
                     date: startDate && endDate ? {
                         [Op.between]: [startDate, endDate]
                     } : undefined
@@ -95,16 +95,16 @@ class TransactionService {
     async updateTransaction(id, userId, data) {
         try {
             const transaction = await Transaction.findOne({
-                where: { id, userId }
+                where: { id, user_id: userId }
             });
 
             if (!transaction) {
                 throw new ValidationError('Transaction not found');
             }
 
-            if (data.categoryId) {
+            if (data.category_id) {
                 const category = await BudgetCategory.findOne({
-                    where: { id: data.categoryId, userId }
+                    where: { id: data.category_id, user_id: userId }
                 });
 
                 if (!category) {
@@ -122,7 +122,7 @@ class TransactionService {
     async deleteTransaction(id, userId) {
         try {
             const transaction = await Transaction.findOne({
-                where: { id, userId }
+                where: { id, user_id: userId }
             });
 
             if (!transaction) {
@@ -192,6 +192,49 @@ class TransactionService {
             return categoryTotals;
         } catch (error) {
             FinanceErrorHandler.handleFinancialOperationError(error, 'transaction_category_totals');
+        }
+    }
+
+    async getMonthlyTransactions(userId, month, year) {
+        try {
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+
+            return await Transaction.findAll({
+                where: {
+                    user_id: userId,
+                    date: {
+                        [Op.between]: [startDate, endDate]
+                    }
+                },
+                include: [{
+                    model: BudgetCategory,
+                    as: 'category'
+                }],
+                order: [['date', 'ASC']]
+            });
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'transaction_get_monthly');
+        }
+    }
+
+    async getRecurringTransactions(userId) {
+        try {
+            return await Transaction.findAll({
+                where: {
+                    user_id: userId,
+                    recurring_type: {
+                        [Op.ne]: 'none'
+                    }
+                },
+                include: [{
+                    model: BudgetCategory,
+                    as: 'category'
+                }],
+                order: [['date', 'DESC']]
+            });
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'transaction_get_recurring');
         }
     }
 }

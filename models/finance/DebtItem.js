@@ -3,9 +3,9 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class DebtItem extends Model {
         static associate(models) {
-            DebtItem.belongsTo(models.User, { foreignKey: 'userId' });
+            DebtItem.belongsTo(models.User, { foreignKey: 'user_id' });
             DebtItem.hasMany(models.DebtPayment, {
-                foreignKey: 'debtId',
+                foreignKey: 'debt_id',
                 as: 'payments'
             });
         }
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
-        userId: {
+        user_id: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -38,28 +38,40 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             defaultValue: 0
         },
-        interestRate: {
+        interest_rate: {
             type: DataTypes.DECIMAL(5, 2),
             allowNull: false,
             defaultValue: 0
         },
-        minimumPayment: {
+        minimum_payment: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false,
             defaultValue: 0
         },
-        dueDate: {
+        due_date: {
             type: DataTypes.DATE,
             allowNull: false
         },
-        initialBalance: {
+        initial_balance: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: false
         },
-        startDate: {
+        start_date: {
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: DataTypes.NOW
+        },
+        lender: {
+            type: DataTypes.STRING(100),
+            allowNull: true
+        },
+        account_number: {
+            type: DataTypes.STRING(50),
+            allowNull: true
+        },
+        notes: {
+            type: DataTypes.TEXT,
+            allowNull: true
         }
     }, {
         sequelize,
@@ -67,15 +79,16 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'debt_items',
         timestamps: true,
         paranoid: true,
+        underscored: true,
         indexes: [
             {
-                fields: ['userId']
+                fields: ['user_id']
             },
             {
                 fields: ['type']
             },
             {
-                fields: ['dueDate']
+                fields: ['due_date']
             }
         ]
     });

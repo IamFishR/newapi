@@ -18,7 +18,25 @@ const schemas = {
             currentInvestments: Joi.number().min(0).required(),
             monthlyInvestmentGoal: Joi.number().min(0).required(),
             riskTolerance: Joi.string().valid('low', 'medium', 'high').required()
-        }).required()
+        }).required(),
+        debtProfile: Joi.object({
+            totalDebt: Joi.number().min(0).required(),
+            monthlyDebtPayments: Joi.number().min(0).required()
+        }),
+        assets: Joi.object({
+            cash: Joi.number().min(0),
+            investments: Joi.number().min(0),
+            property: Joi.number().min(0),
+            vehicle: Joi.number().min(0),
+            other: Joi.number().min(0)
+        }),
+        liabilities: Joi.object({
+            mortgage: Joi.number().min(0),
+            carLoan: Joi.number().min(0),
+            creditCards: Joi.number().min(0),
+            studentLoans: Joi.number().min(0),
+            otherLoans: Joi.number().min(0)
+        })
     }),
 
     budgetCategory: Joi.object({

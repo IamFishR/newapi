@@ -11,6 +11,51 @@ const { Op } = require('sequelize');
 const FinanceErrorHandler = require('./FinanceErrorHandler');
 
 class FinanceService {
+    async setupFinancialProfile(userId, data) {
+        try {
+            // Create or update financial profile with all the initial data
+            const [profile] = await FinancialProfile.upsert({
+                user_id: userId,
+                monthly_income: data.monthlyIncome,
+                monthly_savings_goal: data.monthlySavingsGoal,
+                current_savings: data.currentSavings,
+                monthly_expenses: {
+                    housing: data.monthlyExpenses.housing || 0,
+                    utilities: data.monthlyExpenses.utilities || 0,
+                    transportation: data.monthlyExpenses.transportation || 0,
+                    groceries: data.monthlyExpenses.groceries || 0,
+                    healthcare: data.monthlyExpenses.healthcare || 0,
+                    entertainment: data.monthlyExpenses.entertainment || 0,
+                    other: data.monthlyExpenses.other || 0
+                },
+                investment_profile: {
+                    current_investments: data.investmentProfile.currentInvestments || 0,
+                    monthly_investment_goal: data.investmentProfile.monthlyInvestmentGoal || 0,
+                    risk_tolerance: data.investmentProfile.riskTolerance || 'medium'
+                },
+                last_updated: new Date()
+            });
+
+            // Calculate and store initial metrics
+            const metrics = {
+                totalMonthlyExpenses: Object.values(data.monthlyExpenses).reduce((sum, val) => sum + (val || 0), 0),
+                disposableIncome: data.monthlyIncome - Object.values(data.monthlyExpenses).reduce((sum, val) => sum + (val || 0), 0),
+                debtToIncomeRatio: data.debtProfile ? (data.debtProfile.monthlyDebtPayments / data.monthlyIncome) * 100 : 0,
+                netWorth: (
+                    Object.values(data.assets || {}).reduce((sum, val) => sum + (val || 0), 0) -
+                    Object.values(data.liabilities || {}).reduce((sum, val) => sum + (val || 0), 0)
+                )
+            };
+
+            return {
+                profile,
+                metrics
+            };
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'setup_financial_profile');
+        }
+    }
+
     // Base CRUD operations for financial results
     async getFinancialResult(symbol, toDate, isConsolidated) {
         return await FinancialResult.findOne({
@@ -165,33 +210,43 @@ class FinanceService {
 
     // Budget category management
     async getBudgetCategories(userId) {
-        return await BudgetCategory.findAll({
-            where: { userId },
-            order: [['name', 'ASC']]
-        });
+        try {
+            return await BudgetCategory.findAll({
+                where: { user_id: userId },
+                order: [['name', 'ASC']]
+            });
+        } catch (error) {
+            console.error('Error fetching budget categories:', error);
+            throw new Error('Failed to fetch budget categories');
+        }
     }
 
     async createBudgetCategory(userId, data) {
-        const existing = await BudgetCategory.findOne({
-            where: {
-                userId,
-                name: data.name
+        try {
+            const existing = await BudgetCategory.findOne({
+                where: {
+                    user_id: userId,
+                    name: data.name
+                }
+            });
+
+            if (existing) {
+                throw new ValidationError('A category with this name already exists');
             }
-        });
 
-        if (existing) {
-            throw new ValidationError('A category with this name already exists');
+            return await BudgetCategory.create({
+                user_id: userId,
+                ...data
+            });
+        } catch (error) {
+            console.error('Error creating budget category:', error);
+            throw new Error('Failed to create budget category');
         }
-
-        return await BudgetCategory.create({
-            userId,
-            ...data
-        });
     }
 
     async updateBudgetCategory(id, userId, data) {
         const category = await BudgetCategory.findOne({
-            where: { id, userId }
+            where: { id, user_id: userId }
         });
 
         if (!category) {
@@ -201,7 +256,7 @@ class FinanceService {
         if (data.name && data.name !== category.name) {
             const existing = await BudgetCategory.findOne({
                 where: {
-                    userId,
+                    user_id: userId,
                     name: data.name,
                     id: { [Op.ne]: id }
                 }
@@ -218,14 +273,14 @@ class FinanceService {
 
     async deleteBudgetCategory(id, userId) {
         const category = await BudgetCategory.findOne({
-            where: { id, userId }
+            where: { id, user_id: userId }
         });
 
         if (!category) {
             throw new ValidationError('Budget category not found');
         }
 
-        if (category.isDefault) {
+        if (category.is_default) {
             throw new ValidationError('Cannot delete default budget categories');
         }
 
@@ -235,11 +290,11 @@ class FinanceService {
     // Transaction management
     async getTransactions(userId, options) {
         const { startDate, endDate, category, type, limit = 20, offset = 0 } = options;
-        const where = { userId };
+        const where = { user_id: userId };
 
         if (startDate) where.date = { [Op.gte]: new Date(startDate) };
         if (endDate) where.date = { ...where.date, [Op.lte]: new Date(endDate) };
-        if (category) where.categoryId = category;
+        if (category) where.category_id = category;
         if (type) where.type = type;
 
         return await Transaction.findAndCountAll({
@@ -256,9 +311,9 @@ class FinanceService {
     }
 
     async createTransaction(userId, data) {
-        if (data.categoryId) {
+        if (data.category_id) {
             const category = await BudgetCategory.findOne({
-                where: { id: data.categoryId, userId }
+                where: { id: data.category_id, user_id: userId }
             });
 
             if (!category) {
@@ -267,7 +322,7 @@ class FinanceService {
         }
 
         return await Transaction.create({
-            userId,
+            user_id: userId,
             ...data
         });
     }
@@ -276,7 +331,7 @@ class FinanceService {
     async calculateBudgetMetrics(userId) {
         const transactions = await Transaction.findAll({
             where: {
-                userId,
+                user_id: userId,
                 date: {
                     [Op.gte]: new Date(new Date().setDate(1)) // First day of current month
                 }
@@ -291,11 +346,11 @@ class FinanceService {
         const metrics = {};
 
         for (const category of categories) {
-            const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+            const categoryTransactions = transactions.filter(t => t.category_id === category.id);
             metrics[category.id] = {
-                budgeted: category.budgetedAmount,
+                budgeted: category.budgeted_amount,
                 spent: categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
-                remaining: category.budgetedAmount - categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
+                remaining: category.budgeted_amount - categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
             };
         }
 
@@ -311,8 +366,8 @@ class FinanceService {
             // Fetch transactions within the date range
             const transactions = await Transaction.findAll({
                 where: {
-                    userId,
-                    transaction_date: {
+                    user_id: userId,
+                    date: {
                         [Op.between]: [startDate, endDate]
                     }
                 },
@@ -323,7 +378,7 @@ class FinanceService {
                         attributes: ['id', 'name', 'color']
                     }
                 ],
-                order: [['transaction_date', 'ASC']]
+                order: [['date', 'ASC']]
             });
 
             // Group transactions by month and category
@@ -346,14 +401,14 @@ class FinanceService {
         try {
             // Fetch all categories
             const categories = await BudgetCategory.findAll({
-                where: { userId }
+                where: { user_id: userId }
             });
 
             // Fetch transactions for the specified period
             const transactions = await Transaction.findAll({
                 where: {
-                    userId,
-                    transaction_date: {
+                    user_id: userId,
+                    date: {
                         [Op.between]: [startDate, endDate]
                     }
                 },
@@ -396,7 +451,7 @@ class FinanceService {
         const monthlyData = {};
 
         transactions.forEach(transaction => {
-            const date = new Date(transaction.transaction_date);
+            const date = new Date(transaction.date);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
             if (!monthlyData[monthKey]) {
@@ -434,7 +489,7 @@ class FinanceService {
 
         // Populate with actual data
         transactions.forEach(transaction => {
-            const dateKey = new Date(transaction.transaction_date).toISOString().split('T')[0];
+            const dateKey = new Date(transaction.date).toISOString().split('T')[0];
             if (transaction.type === 'income') {
                 incomeByDay[dateKey] = (incomeByDay[dateKey] || 0) + transaction.amount;
             } else {
@@ -460,14 +515,14 @@ class FinanceService {
         const comparisonData = {};
 
         categories.forEach(category => {
-            const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+            const categoryTransactions = transactions.filter(t => t.category_id === category.id);
             const totalSpent = categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
 
             comparisonData[category.id] = {
                 name: category.name,
-                budgeted: category.budgetedAmount,
+                budgeted: category.budgeted_amount,
                 spent: totalSpent,
-                remaining: category.budgetedAmount - totalSpent
+                remaining: category.budgeted_amount - totalSpent
             };
         });
 

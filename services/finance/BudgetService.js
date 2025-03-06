@@ -8,7 +8,7 @@ class BudgetService {
     async getBudgetCategories(userId) {
         try {
             return await BudgetCategory.findAll({
-                where: { userId },
+                where: { user_id: userId },
                 order: [['name', 'ASC']]
             });
         } catch (error) {
@@ -20,7 +20,7 @@ class BudgetService {
         try {
             const existing = await BudgetCategory.findOne({
                 where: {
-                    userId,
+                    user_id: userId,
                     name: data.name
                 }
             });
@@ -30,7 +30,7 @@ class BudgetService {
             }
 
             return await BudgetCategory.create({
-                userId,
+                user_id: userId,
                 ...data
             });
         } catch (error) {
@@ -41,7 +41,7 @@ class BudgetService {
     async updateBudgetCategory(id, userId, data) {
         try {
             const category = await BudgetCategory.findOne({
-                where: { id, userId }
+                where: { id, user_id: userId }
             });
 
             if (!category) {
@@ -51,7 +51,7 @@ class BudgetService {
             if (data.name && data.name !== category.name) {
                 const existing = await BudgetCategory.findOne({
                     where: {
-                        userId,
+                        user_id: userId,
                         name: data.name,
                         id: { [Op.ne]: id }
                     }
@@ -72,7 +72,7 @@ class BudgetService {
     async deleteBudgetCategory(id, userId) {
         try {
             const category = await BudgetCategory.findOne({
-                where: { id, userId }
+                where: { id, user_id: userId }
             });
 
             if (!category) {
@@ -101,11 +101,11 @@ class BudgetService {
             const metrics = {};
 
             for (const category of categories) {
-                const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+                const categoryTransactions = transactions.filter(t => t.category_id === category.id);
                 metrics[category.id] = {
-                    budgeted: category.budgetedAmount,
+                    budgeted: category.budgeted_amount,
                     spent: categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0),
-                    remaining: category.budgetedAmount - categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
+                    remaining: category.budgeted_amount - categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
                 };
             }
 
@@ -120,18 +120,53 @@ class BudgetService {
             const endDate = new Date();
             const startDate = this.calculateStartDate(range);
 
-            const transactions = await TransactionService.getTransactionsByDateRange(userId, startDate, endDate);
+            const transactions = await Transaction.findAll({
+                where: {
+                    user_id: userId,
+                    date: {
+                        [Op.between]: [startDate, endDate]
+                    },
+                    type: 'expense'  // Only consider expenses for trends
+                },
+                include: [{
+                    model: BudgetCategory,
+                    as: 'category',
+                    required: true
+                }],
+                order: [['date', 'ASC']]
+            });
 
-            // Group transactions by month and category
-            const monthlyData = this.groupTransactionsByMonth(transactions);
+            const monthlyTrends = [];
+            let currentDate = new Date(startDate);
+            
+            while (currentDate <= endDate) {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const monthEnd = new Date(year, month + 1, 0);
+                
+                const monthTransactions = transactions.filter(t => {
+                    const tDate = new Date(t.date);
+                    return tDate >= new Date(year, month, 1) && tDate <= monthEnd;
+                });
 
-            // Calculate trendline data
-            const trendData = this.calculateTrendData(transactions, startDate, endDate);
+                const totalSpending = monthTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+                const essentialSpending = monthTransactions
+                    .filter(t => t.category?.is_default)
+                    .reduce((sum, t) => sum + Number(t.amount), 0);
+                const discretionarySpending = totalSpending - essentialSpending;
 
-            return {
-                monthly: monthlyData,
-                trend: trendData
-            };
+                monthlyTrends.push({
+                    month: `${year}-${String(month + 1).padStart(2, '0')}`,
+                    totalSpending,
+                    essentialSpending,
+                    discretionarySpending,
+                    totalSavings: 0 // Will be calculated if needed
+                });
+
+                currentDate.setMonth(currentDate.getMonth() + 1);
+            }
+
+            return monthlyTrends;
         } catch (error) {
             FinanceErrorHandler.handleFinancialOperationError(error, 'budget_get_trends');
         }
@@ -231,14 +266,14 @@ class BudgetService {
         const comparisonData = {};
 
         categories.forEach(category => {
-            const categoryTransactions = transactions.filter(t => t.categoryId === category.id);
+            const categoryTransactions = transactions.filter(t => t.category_id === category.id);
             const totalSpent = categoryTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
 
             comparisonData[category.id] = {
                 name: category.name,
-                budgeted: category.budgetedAmount,
+                budgeted: category.budgeted_amount,
                 spent: totalSpent,
-                remaining: category.budgetedAmount - totalSpent
+                remaining: category.budgeted_amount - totalSpent
             };
         });
 

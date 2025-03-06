@@ -3,9 +3,9 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class Transaction extends Model {
         static associate(models) {
-            Transaction.belongsTo(models.User, { foreignKey: 'userId' });
+            Transaction.belongsTo(models.User, { foreignKey: 'user_id' });
             Transaction.belongsTo(models.BudgetCategory, { 
-                foreignKey: 'categoryId',
+                foreignKey: 'category_id',
                 as: 'category'
             });
         }
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
-        userId: {
+        user_id: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id'
             }
         },
-        categoryId: {
+        category_id: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -50,11 +50,11 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.ENUM('income', 'expense'),
             allowNull: false
         },
-        recurringType: {
+        recurring_type: {
             type: DataTypes.ENUM('none', 'daily', 'weekly', 'monthly', 'yearly'),
             defaultValue: 'none'
         },
-        recurringEndDate: {
+        recurring_end_date: {
             type: DataTypes.DATE,
             allowNull: true
         }
@@ -64,12 +64,13 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'transactions',
         timestamps: true,
         paranoid: true,
+        underscored: true,
         indexes: [
             {
-                fields: ['userId']
+                fields: ['user_id']
             },
             {
-                fields: ['categoryId']
+                fields: ['category_id']
             },
             {
                 fields: ['date']

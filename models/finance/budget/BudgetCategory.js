@@ -8,7 +8,8 @@ class BudgetCategory extends Model {
             onDelete: 'CASCADE'
         });
         this.hasMany(models.Transaction, {
-            foreignKey: 'category_id'
+            foreignKey: 'category_id',
+            as: 'transactions'
         });
     }
 }

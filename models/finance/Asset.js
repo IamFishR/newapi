@@ -3,7 +3,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
     class Asset extends Model {
         static associate(models) {
-            Asset.belongsTo(models.User, { foreignKey: 'userId' });
+            Asset.belongsTo(models.User, { foreignKey: 'user_id' });
         }
     }
 
@@ -13,7 +13,7 @@ module.exports = (sequelize, DataTypes) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true
         },
-        userId: {
+        user_id: {
             type: DataTypes.UUID,
             allowNull: false,
             references: {
@@ -34,15 +34,15 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             defaultValue: 0
         },
-        purchaseValue: {
+        purchase_value: {
             type: DataTypes.DECIMAL(15, 2),
             allowNull: true
         },
-        purchaseDate: {
+        purchase_date: {
             type: DataTypes.DATE,
             allowNull: true
         },
-        lastUpdated: {
+        last_updated: {
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: DataTypes.NOW
@@ -51,7 +51,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.TEXT,
             allowNull: true
         },
-        valueHistory: {
+        value_history: {
             type: DataTypes.JSON,
             allowNull: true,
             defaultValue: []
@@ -62,15 +62,16 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'assets',
         timestamps: true,
         paranoid: true,
+        underscored: true,
         indexes: [
             {
-                fields: ['userId']
+                fields: ['user_id']
             },
             {
                 fields: ['category']
             },
             {
-                fields: ['lastUpdated']
+                fields: ['last_updated']
             }
         ]
     });
