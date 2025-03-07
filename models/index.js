@@ -56,6 +56,7 @@ const modelDefinitions = {
     ShopAuditLog: require('./shop/ShopAuditLog'),
     Order: require('./shop/Order'),
     OrderItem: require('./shop/OrderItem'),
+    OrderStatusHistory: require('./shop/OrderStatusHistory'),
     ProductTag: require('./shop/ProductTag'),
     ProductPriceHistory: require('./shop/ProductPriceHistory'),
     InventoryMovement: require('./shop/InventoryMovement')

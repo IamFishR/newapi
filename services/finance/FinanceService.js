@@ -289,25 +289,30 @@ class FinanceService {
 
     // Transaction management
     async getTransactions(userId, options) {
-        const { startDate, endDate, category, type, limit = 20, offset = 0 } = options;
-        const where = { user_id: userId };
+        try {
+            const { startDate, endDate, category, type, limit = 20, offset = 0 } = options;
+            const where = { user_id: userId };
 
-        if (startDate) where.date = { [Op.gte]: new Date(startDate) };
-        if (endDate) where.date = { ...where.date, [Op.lte]: new Date(endDate) };
-        if (category) where.category_id = category;
-        if (type) where.type = type;
+            if (startDate) where.date = { [Op.gte]: new Date(startDate) };
+            if (endDate) where.date = { ...where.date, [Op.lte]: new Date(endDate) };
+            if (category) where.category_id = category;
+            if (type) where.type = type;
 
-        return await Transaction.findAndCountAll({
-            where,
-            include: [{
-                model: BudgetCategory,
-                as: 'category',
-                attributes: ['id', 'name', 'color']
-            }],
-            order: [['date', 'DESC']],
-            limit,
-            offset
-        });
+            return await Transaction.findAndCountAll({
+                where,
+                include: [{
+                    model: BudgetCategory,
+                    as: 'category',
+                    attributes: ['id', 'name', 'color']
+                }],
+                order: [['date', 'DESC']],
+                limit,
+                offset
+            });
+        } catch (error) {
+            FinanceErrorHandler.handleFinancialOperationError(error, 'transaction_get_all');
+            throw error; // Re-throw to be handled by the route handler
+        }
     }
 
     async createTransaction(userId, data) {

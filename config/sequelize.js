@@ -37,13 +37,7 @@ const environments = {
         database: config.db.name + '_test',
         host: config.db.host,
         dialect: 'mysql',
-        logging: false,
-        pool: {
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        }
+        logging: false
     },
     production: {
         ...baseConfig,
@@ -65,9 +59,13 @@ const environments = {
 const env = process.env.NODE_ENV || 'development';
 const envConfig = environments[env];
 
-module.exports = new Sequelize(
+// Export environments config for Sequelize CLI
+module.exports = environments;
+
+// Export Sequelize instance for the application
+module.exports.sequelize = new Sequelize(
     envConfig.database,
     envConfig.username,
     envConfig.password,
-    envConfig
+    {...envConfig}  // Spread the full config including define options
 );

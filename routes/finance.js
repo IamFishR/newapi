@@ -87,7 +87,11 @@ router.get('/budget/transactions', auth.isAuthenticated, async (req, res, next) 
         res.json({ status: 'success', data: transactions });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get transactions' });
-        next(error);
+        res.status(500).json({ 
+            status: 'error',
+            message: 'Failed to fetch transactions',
+            details: error.message 
+        });
     }
 });
 
