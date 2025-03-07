@@ -29,6 +29,7 @@ const networthRouter = require('./routes/networth');
 const taxRouter = require('./routes/tax');
 const shopRouter = require('./routes/shop');
 const tasksRouter = require('./routes/tasks');  // Add tasks router
+const bankStatementsRouter = require('./routes/bank-statements'); // Add bank statements router
 const { max } = require('./models/shop/OrderStatusHistory');
 
 const app = express();
@@ -124,6 +125,7 @@ app.use('/api/financial-data', financialDataRouter);
 app.use('/api/monitoring', monitoringRouter);
 app.use('/api/shop', shopRouter);
 app.use('/api/tasks', tasksRouter);
+app.use('/api/bank-statements', bankStatementsRouter); // Add bank statements route
 
 // Finance routes
 app.use('/api/finance', financeRouter);
