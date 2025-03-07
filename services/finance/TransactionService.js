@@ -2,11 +2,14 @@ const { Transaction, BudgetCategory } = require('../../models/finance');
 const ValidationError = require('../../utils/ValidationError');
 const { Op } = require('sequelize');
 const FinanceErrorHandler = require('./FinanceErrorHandler');
+const debug = require('debug')('finance:transactions');
 
 class TransactionService {
     async getTransactions(userId, options) {
         try {
-            const { startDate, endDate, category, type, limit = 20, offset = 0 } = options;
+            const { startDate, endDate, category, type } = options;
+            const limit = parseInt(options.limit || 20, 10);
+            const offset = parseInt(options.offset || 0, 10);
             const where = { user_id: userId };
 
             if (startDate) where.date = { [Op.gte]: new Date(startDate) };
@@ -14,7 +17,7 @@ class TransactionService {
             if (category) where.category_id = category;
             if (type) where.type = type;
 
-            return await Transaction.findAndCountAll({
+            const queryOptions = {
                 where,
                 include: [{
                     model: BudgetCategory,
@@ -23,9 +26,17 @@ class TransactionService {
                 }],
                 order: [['date', 'DESC']],
                 limit,
-                offset
-            });
+                offset,
+                logging: (sql, timing) => {
+                    debug('Generated SQL:', sql);
+                    debug('Query timing:', timing, 'ms');
+                }
+            };
+
+            debug('Query options:', JSON.stringify(queryOptions, null, 2));
+            return await Transaction.findAndCountAll(queryOptions);
         } catch (error) {
+            debug('Error in getTransactions:', error);
             FinanceErrorHandler.handleFinancialOperationError(error, 'transaction_get_all');
         }
     }
