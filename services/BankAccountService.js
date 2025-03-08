@@ -90,17 +90,25 @@ class BankAccountService {
      * @param {string} bankName - Optional bank name to make search more specific
      * @returns {Promise<Object|null>} - Bank account if found, null otherwise
      */
-    async findUserAccountByNumber(userId, accountNumber, bankName) {
-        const where = {
-            user_id: userId,
-            account_number: accountNumber
-        };
-        
-        if (bankName) {
-            where.bank_name = bankName;
+    async findUserAccountByNumber(userId, accountNumber, bankName = null) {
+        try {
+            const whereClause = {
+                user_id: userId,
+                account_number: accountNumber
+            };
+
+            if (bankName) {
+                whereClause.bank_name = bankName;
+            }
+
+            const account = await BankAccount.findOne({
+                where: whereClause
+            });
+            return account;
+        } catch (error) {
+            LoggingService.logError('Error finding user account by number:', error);
+            throw error;
         }
-        
-        return await BankAccount.findOne({ where });
     }
 
     /**
@@ -237,4 +245,4 @@ class BankAccountService {
     }
 }
 
-module.exports = new BankAccountService();
+module.exports = BankAccountService;

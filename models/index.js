@@ -33,6 +33,7 @@ const modelDefinitions = {
     HistoricalPrice: require('./market/HistoricalPrice'),
     HistoricalExtreme: require('./market/HistoricalExtreme'),
     BidAsk: require('./market/BidAsk'),
+    BankAccount: require('./finance/BankAccount'),
 
     // Task management models
     Project: require('./task/Project'),

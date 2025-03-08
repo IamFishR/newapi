@@ -7,6 +7,9 @@ const { validateRequest } = require('../middleware/validateRequest');
 const LoggingService = require('../services/monitoring/LoggingService');
 const ValidationError = require('../utils/ValidationError');
 
+// Initialize the service
+const bankAccountService = new BankAccountService();
+
 // Apply API rate limiter to all routes
 router.use(apiLimiter);
 
@@ -46,7 +49,7 @@ router.use(apiLimiter);
 router.get('/', auth.isAuthenticated, async (req, res, next) => {
     try {
         const { status, limit, offset } = req.query;
-        const accounts = await BankAccountService.getUserAccounts(req.user.id, { status, limit, offset });
+        const accounts = await bankAccountService.getUserAccounts(req.user.id, { status, limit, offset });
         res.json({
             success: true,
             data: accounts
@@ -82,7 +85,7 @@ router.get('/', auth.isAuthenticated, async (req, res, next) => {
  */
 router.get('/:id', auth.isAuthenticated, async (req, res, next) => {
     try {
-        const account = await BankAccountService.getAccountById(req.params.id);
+        const account = await bankAccountService.getAccountById(req.params.id);
         if (!account) {
             return res.status(404).json({
                 success: false,
@@ -158,7 +161,7 @@ router.post('/find', auth.isAuthenticated, async (req, res, next) => {
         
         const { account_number, bank_name } = req.body;
         
-        const account = await BankAccountService.findUserAccountByNumber(
+        const account = await bankAccountService.findUserAccountByNumber(
             req.user.id,
             account_number,
             bank_name
@@ -259,7 +262,7 @@ router.post('/', auth.isAuthenticated, validateRequest({
             opening_balance: req.body.opening_balance || 0,
             current_balance: req.body.opening_balance || 0
         };
-        const account = await BankAccountService.createAccount(accountData);
+        const account = await bankAccountService.createAccount(accountData);
         res.status(201).json({
             success: true,
             data: account,
@@ -318,7 +321,7 @@ router.post('/', auth.isAuthenticated, validateRequest({
  */
 router.put('/:id', auth.isAuthenticated, async (req, res, next) => {
     try {
-        const account = await BankAccountService.getAccountById(req.params.id);
+        const account = await bankAccountService.getAccountById(req.params.id);
         if (!account) {
             return res.status(404).json({
                 success: false,
@@ -341,7 +344,7 @@ router.put('/:id', auth.isAuthenticated, async (req, res, next) => {
                 updateData[field] = req.body[field];
             }
         });
-        const updatedAccount = await BankAccountService.updateAccount(req.params.id, updateData);
+        const updatedAccount = await bankAccountService.updateAccount(req.params.id, updateData);
         res.json({
             success: true,
             data: updatedAccount,
@@ -378,7 +381,7 @@ router.put('/:id', auth.isAuthenticated, async (req, res, next) => {
  */
 router.delete('/:id', auth.isAuthenticated, async (req, res, next) => {
     try {
-        const account = await BankAccountService.getAccountById(req.params.id);
+        const account = await bankAccountService.getAccountById(req.params.id);
         if (!account) {
             return res.status(404).json({
                 success: false,
@@ -391,7 +394,7 @@ router.delete('/:id', auth.isAuthenticated, async (req, res, next) => {
                 message: 'You do not have permission to delete this account'
             });
         }
-        await BankAccountService.deleteAccount(req.params.id);
+        await bankAccountService.deleteAccount(req.params.id);
         res.json({
             success: true,
             message: 'Bank account deleted successfully'
@@ -427,7 +430,7 @@ router.delete('/:id', auth.isAuthenticated, async (req, res, next) => {
  */
 router.post('/:id/balance', auth.isAuthenticated, async (req, res, next) => {
     try {
-        const account = await BankAccountService.getAccountById(req.params.id);
+        const account = await bankAccountService.getAccountById(req.params.id);
         if (!account) {
             return res.status(404).json({
                 success: false,
@@ -440,7 +443,7 @@ router.post('/:id/balance', auth.isAuthenticated, async (req, res, next) => {
                 message: 'You do not have permission to update this account'
             });
         }
-        const updatedAccount = await BankAccountService.updateAccountBalance(req.params.id);
+        const updatedAccount = await bankAccountService.updateAccountBalance(req.params.id);
         res.json({
             success: true,
             data: {
@@ -452,6 +455,34 @@ router.post('/:id/balance', auth.isAuthenticated, async (req, res, next) => {
     } catch (error) {
         LoggingService.logError(error, { context: 'Update account balance' });
         next(error);
+    }
+});
+
+router.get('/account/:accountNumber', auth.isAuthenticated, async (req, res) => {
+    try {
+        const account = await bankAccountService.findUserAccountByNumber(
+            req.user.id,
+            req.params.accountNumber,
+            req.query.bankName
+        );
+        
+        if (!account) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Account not found' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: account
+        });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get account by account number' });
+        res.status(500).json({ 
+            success: false,
+            message: error.message 
+        });
     }
 });
 
