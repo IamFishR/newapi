@@ -31,7 +31,7 @@ class BankAccountService {
             const account = await BankAccount.create(accountData, { transaction });
             
             // Log the creation
-            LoggingService.logInfo(`Bank account created: ${account.id}`, {
+            LoggingService.logDebug(`Bank account created: ${account.id}`, {
                 context: 'BankAccountService.createAccount',
                 accountId: account.id,
                 userId: accountData.user_id
@@ -100,7 +100,7 @@ class BankAccountService {
             where.bank_name = bankName;
         }
         
-        return BankAccount.findOne({ where });
+        return await BankAccount.findOne({ where });
     }
 
     /**

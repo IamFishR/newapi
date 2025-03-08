@@ -105,6 +105,101 @@ router.get('/', auth.isAuthenticated, async (req, res, next) => {
 
 /**
  * @swagger
+ * /api/finance/transactions/bulk:
+ *   post:
+ *     summary: Create multiple transactions at once
+ *     description: Creates multiple transactions for the authenticated user, typically from a bank statement import
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - transactions
+ *             properties:
+ *               account_id:
+ *                 type: string
+ *                 description: The bank account ID to associate with all transactions
+ *               transactions:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - description
+ *                     - amount
+ *                     - type
+ *                     - date
+ *                   properties:
+ *                     description:
+ *                       type: string
+ *                     amount:
+ *                       type: number
+ *                     type:
+ *                       type: string
+ *                       enum: [income, expense]
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                     category:
+ *                       type: string
+ *                       description: Category name, will be matched or created
+ *     responses:
+ *       201:
+ *         description: Transactions created
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/bulk', auth.isAuthenticated, validateRequest({
+  transactions: {
+    in: ['body'],
+    isArray: true,
+    errorMessage: 'Transactions must be an array'
+  }
+}), async (req, res, next) => {
+  try {
+    const { account_id, transactions } = req.body;
+    
+    if (!transactions.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'No transactions provided'
+      });
+    }
+    
+    // Process and validate transactions
+    const processedTransactions = await TransactionService.processBulkTransactions(
+      req.user.id,
+      transactions,
+      account_id
+    );
+    
+    // Update account balance if needed
+    if (account_id) {
+      const BankAccountService = require('../../services/BankAccountService');
+      await BankAccountService.updateAccountBalance(account_id);
+    }
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        created: processedTransactions.length,
+        duplicatesSkipped: transactions.length - processedTransactions.length
+      },
+      message: `Successfully imported ${processedTransactions.length} transactions`
+    });
+  } catch (error) {
+    LoggingService.logError(error, { context: 'Bulk import transactions' });
+    next(error);
+  }
+});
+
+/**
+ * @swagger
  * /api/finance/transactions/{id}:
  *   get:
  *     summary: Get transaction by ID
@@ -262,101 +357,6 @@ router.post('/', auth.isAuthenticated, validateRequest({
     });
   } catch (error) {
     LoggingService.logError(error, { context: 'Create transaction' });
-    next(error);
-  }
-});
-
-/**
- * @swagger
- * /api/finance/transactions/bulk:
- *   post:
- *     summary: Create multiple transactions at once
- *     description: Creates multiple transactions for the authenticated user, typically from a bank statement import
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - transactions
- *             properties:
- *               account_id:
- *                 type: string
- *                 description: The bank account ID to associate with all transactions
- *               transactions:
- *                 type: array
- *                 items:
- *                   type: object
- *                   required:
- *                     - description
- *                     - amount
- *                     - type
- *                     - date
- *                   properties:
- *                     description:
- *                       type: string
- *                     amount:
- *                       type: number
- *                     type:
- *                       type: string
- *                       enum: [income, expense]
- *                     date:
- *                       type: string
- *                       format: date
- *                     category:
- *                       type: string
- *                       description: Category name, will be matched or created
- *     responses:
- *       201:
- *         description: Transactions created
- *       400:
- *         description: Invalid request data
- *       401:
- *         description: Unauthorized
- */
-router.post('/bulk', auth.isAuthenticated, validateRequest({
-  transactions: {
-    in: ['body'],
-    isArray: true,
-    errorMessage: 'Transactions must be an array'
-  }
-}), async (req, res, next) => {
-  try {
-    const { account_id, transactions } = req.body;
-    
-    if (!transactions.length) {
-      return res.status(400).json({
-        success: false,
-        message: 'No transactions provided'
-      });
-    }
-    
-    // Process and validate transactions
-    const processedTransactions = await TransactionService.processBulkTransactions(
-      req.user.id,
-      transactions,
-      account_id
-    );
-    
-    // Update account balance if needed
-    if (account_id) {
-      const BankAccountService = require('../../services/BankAccountService');
-      await BankAccountService.updateAccountBalance(account_id);
-    }
-    
-    res.status(201).json({
-      success: true,
-      data: {
-        created: processedTransactions.length,
-        duplicatesSkipped: transactions.length - processedTransactions.length
-      },
-      message: `Successfully imported ${processedTransactions.length} transactions`
-    });
-  } catch (error) {
-    LoggingService.logError(error, { context: 'Bulk import transactions' });
     next(error);
   }
 });

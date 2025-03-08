@@ -134,14 +134,28 @@ router.get('/:id', auth.isAuthenticated, async (req, res, next) => {
  *       401:
  *         description: Unauthorized
  */
-router.post('/find', auth.isAuthenticated, validateRequest({
-    account_number: {
-        in: ['body'],
-        notEmpty: true,
-        errorMessage: 'Account number is required'
-    }
-}), async (req, res, next) => {
+router.post('/find', auth.isAuthenticated, async (req, res, next) => {
     try {
+        // Validate request body
+        // const { error } = validateRequest({
+        //     account_number: {
+        //         in: ['body'],
+        //         notEmpty: true,
+        //         errorMessage: 'Account number is required'
+        //     },
+        //     bank_name: {
+        //         in: ['body'],
+        //         notEmpty: true,
+        //         errorMessage: 'Bank name is required'
+        //     }
+        // })(req.body);
+        // if (error) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: error.message
+        //     });
+        // }
+        
         const { account_number, bank_name } = req.body;
         
         const account = await BankAccountService.findUserAccountByNumber(
@@ -151,14 +165,16 @@ router.post('/find', auth.isAuthenticated, validateRequest({
         );
         
         if (!account) {
-            return res.status(404).json({
+            return res.status(200).json({
                 success: false,
-                message: 'Account not found'
+                message: 'Account not found',
+                data: null
             });
         }
         
         res.json({
             success: true,
+            message: 'Account found successfully',
             data: account
         });
     } catch (error) {

@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true
         },
         user_id: {
-            type: DataTypes.INTEGER, // Changed from UUID to INTEGER to match users table
+            type: DataTypes.INTEGER,
             allowNull: false,
             references: {
                 model: 'users',
@@ -35,8 +35,7 @@ module.exports = (sequelize, DataTypes) => {
             references: {
                 model: 'bank_accounts',
                 key: 'id'
-            },
-            comment: 'Link to the bank account this transaction belongs to'
+            }
         },
         category_id: {
             type: DataTypes.UUID,
@@ -98,4 +97,4 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     return Transaction;
-};
+}
