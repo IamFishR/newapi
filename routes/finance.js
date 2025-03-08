@@ -86,7 +86,14 @@ router.post('/budget/categories', auth.isAuthenticated, async (req, res, next) =
 router.get('/budget/transactions', auth.isAuthenticated, async (req, res, next) => {
     try {
         const transactions = await FinanceService.getTransactions(req.user.id, req.query);
-        res.json({ status: 'success', data: transactions });
+        if (transactions?.count == 0) {
+            return res.status(204).json({
+                status: 'success',
+                message: 'No transactions found'
+            });
+        }
+
+        res.json({ status: 'success', data: transactions.rows });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get transactions' });
         res.status(500).json({
