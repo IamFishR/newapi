@@ -160,7 +160,7 @@ router.post('/bulk', auth.isAuthenticated, validateRequest({
     isArray: true,
     errorMessage: 'Transactions must be an array'
   }
-}), async (req, res, next) => {
+}), async (req, res, next) => { 
   try {
     const { account_id, transactions } = req.body;
     

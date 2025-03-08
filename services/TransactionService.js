@@ -1,4 +1,5 @@
 const { Transaction, BudgetCategory, BankAccount, sequelize } = require('../models');
+const BankAccountService = require('./BankAccountService');
 const { Op } = require('sequelize');
 
 class TransactionService {
@@ -157,7 +158,6 @@ class TransactionService {
         
         // Update account balance if this transaction was associated with an account
         if (accountId) {
-            const BankAccountService = require('./BankAccountService');
             await BankAccountService.updateAccountBalance(accountId);
         }
         
@@ -204,6 +204,7 @@ class TransactionService {
             // Find existing transactions with same description, amount and date to avoid duplicates
             // Creating a signature for each transaction using description + amount + date
             const existingTransactions = await Transaction.findAll({
+                attributes: ['description', 'amount', 'date', 'user_id', 'account_id'],
                 where: {
                     user_id: userId,
                     account_id: accountId || null
@@ -248,7 +249,7 @@ class TransactionService {
                     } else {
                         // Create new category
                         const newCategory = await BudgetCategory.create({
-                            user_id: userId,
+                            userId: userId,
                             name: txData.category,
                             is_default: false
                         }, { transaction: dbTransaction });
@@ -266,7 +267,7 @@ class TransactionService {
                     if (!otherCategory) {
                         // Create an "Other" category if it doesn't exist
                         otherCategory = await BudgetCategory.create({
-                            user_id: userId,
+                            userId: userId,
                             name: 'Other',
                             is_default: true
                         }, { transaction: dbTransaction });

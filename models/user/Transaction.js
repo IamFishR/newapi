@@ -1,18 +1,27 @@
 const { Model } = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
 
 module.exports = (sequelize, DataTypes) => {
     class Transaction extends Model {
         static associate(models) {
             Transaction.belongsTo(models.User, { foreignKey: 'user_id' });
-            Transaction.belongsTo(models.Company, { foreignKey: 'symbol' });
+            Transaction.belongsTo(models.BudgetCategory, {
+                foreignKey: 'category_id',
+                as: 'category'
+            });
+            Transaction.belongsTo(models.BankAccount, {
+                foreignKey: 'account_id',
+                as: 'account'
+            });
         }
     }
 
     Transaction.init({
         id: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
-            autoIncrement: true
+            allowNull: false
         },
         user_id: {
             type: DataTypes.INTEGER,
@@ -22,30 +31,52 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id'
             }
         },
-        symbol: {
-            type: DataTypes.STRING(20),
-            allowNull: false,
+        account_id: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
             references: {
-                model: 'companies',
-                key: 'symbol'
+                model: 'bank_accounts',
+                key: 'id'
             }
         },
-        transaction_type: {
-            type: DataTypes.STRING(10),
-            allowNull: false,
-            validate: {
-                isIn: [['BUY', 'SELL']]
+        category_id: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            references: {
+                model: 'budget_categories',
+                key: 'id'
             }
         },
-        quantity: {
-            type: DataTypes.BIGINT,
+        date: {
+            type: DataTypes.DATE,
             allowNull: false
         },
-        price: {
+        description: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        amount: {
             type: DataTypes.DECIMAL(10, 2),
             allowNull: false
         },
-        transaction_date: {
+        type: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                isIn: [['income', 'expense']]
+            }
+        },
+        recurring_type: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'none'
+        },
+        createdAt: {
+            type: DataTypes.DATE,
+            allowNull: false,
+            defaultValue: DataTypes.NOW
+        },
+        updatedAt: {
             type: DataTypes.DATE,
             allowNull: false,
             defaultValue: DataTypes.NOW
@@ -54,7 +85,14 @@ module.exports = (sequelize, DataTypes) => {
         sequelize,
         modelName: 'Transaction',
         tableName: 'transactions',
-        timestamps: true
+        timestamps: true,
+        hooks: {
+            beforeCreate: (transaction) => {
+                if (!transaction.id) {
+                    transaction.id = uuidv4();
+                }
+            }
+        }
     });
 
     return Transaction;

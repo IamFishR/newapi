@@ -3,6 +3,8 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const ValidationService = require('../utils/ValidationService');
+const TransactionService = require('../services/TransactionService');
+const BankAccountService = require('../services/BankAccountService');
 const LoggingService = require('../services/monitoring/LoggingService');
 const {
     FinanceService,
@@ -87,10 +89,10 @@ router.get('/budget/transactions', auth.isAuthenticated, async (req, res, next) 
         res.json({ status: 'success', data: transactions });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get transactions' });
-        res.status(500).json({ 
+        res.status(500).json({
             status: 'error',
             message: 'Failed to fetch transactions',
-            details: error.message 
+            details: error.message
         });
     }
 });
@@ -103,6 +105,118 @@ router.post('/budget/transactions', auth.isAuthenticated, async (req, res, next)
     } catch (error) {
         LoggingService.logError(error, { context: 'Add transaction' });
         next(error);
+    }
+});
+
+/**
+ * @swagger
+ * /api/finance/transactions/bulk:
+ *   post:
+ *     summary: Create multiple transactions at once
+ *     description: Creates multiple transactions for the authenticated user, typically from a bank statement import
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - transactions
+ *             properties:
+ *               account_id:
+ *                 type: string
+ *                 description: The bank account ID to associate with all transactions
+ *               transactions:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - description
+ *                     - amount
+ *                     - type
+ *                     - date
+ *                   properties:
+ *                     description:
+ *                       type: string
+ *                     amount:
+ *                       type: number
+ *                     type:
+ *                       type: string
+ *                       enum: [income, expense]
+ *                     date:
+ *                       type: string
+ *                       format: date
+ *                     category:
+ *                       type: string
+ *                       description: Category name, will be matched or created
+ *     responses:
+ *       201:
+ *         description: Transactions created
+ *       400:
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ */
+router.post('/budget/transactions/bulk', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const { account_id, transactions } = req.body;
+
+        if (!transactions?.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'No transactions provided'
+            });
+        }
+
+        // Validate basic transaction structure
+        const invalidTransactions = transactions.filter(t => 
+            !t.description || !t.amount || !t.date
+        );
+
+        if (invalidTransactions.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid transaction data found',
+                details: 'Each transaction must include description, amount, and date'
+            });
+        }
+
+        // Process and validate transactions
+        const processedTransactions = await TransactionService.processBulkTransactions(
+            req.user.id,
+            transactions,
+            account_id
+        );
+
+        // Update account balance if needed
+        if (account_id) {
+            await BankAccountService.updateAccountBalance(account_id);
+        }
+
+        res.status(201).json({
+            success: true,
+            data: {
+                created: processedTransactions.length,
+                duplicatesSkipped: transactions.length - processedTransactions.length
+            },
+            message: `Successfully imported ${processedTransactions.length} transactions`
+        });
+
+    } catch (error) {
+        LoggingService.logError(error, {
+            context: 'Bulk add transactions',
+            userId: req.user.id,
+            accountId: req.body.account_id
+        });
+        
+        // Send a more specific error message
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to process transactions',
+            error: error.message
+        });
     }
 });
 

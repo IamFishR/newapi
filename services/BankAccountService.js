@@ -245,4 +245,4 @@ class BankAccountService {
     }
 }
 
-module.exports = BankAccountService;
+module.exports = new BankAccountService();
