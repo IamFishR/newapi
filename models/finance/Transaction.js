@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'category_id',
                 as: 'category'
             });
+            Transaction.belongsTo(models.BankAccount, {
+                foreignKey: 'account_id',
+                as: 'account'
+            });
         }
     }
 
@@ -18,12 +22,21 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true
         },
         user_id: {
-            type: DataTypes.UUID,
+            type: DataTypes.INTEGER, // Changed from UUID to INTEGER to match users table
             allowNull: false,
             references: {
                 model: 'users',
                 key: 'id'
             }
+        },
+        account_id: {
+            type: DataTypes.UUID,
+            allowNull: true,
+            references: {
+                model: 'bank_accounts',
+                key: 'id'
+            },
+            comment: 'Link to the bank account this transaction belongs to'
         },
         category_id: {
             type: DataTypes.UUID,
@@ -68,6 +81,9 @@ module.exports = (sequelize, DataTypes) => {
         indexes: [
             {
                 fields: ['user_id']
+            },
+            {
+                fields: ['account_id']
             },
             {
                 fields: ['category_id']

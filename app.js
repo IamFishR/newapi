@@ -30,6 +30,8 @@ const taxRouter = require('./routes/tax');
 const shopRouter = require('./routes/shop');
 const tasksRouter = require('./routes/tasks');  // Add tasks router
 const bankStatementsRouter = require('./routes/bank-statements'); // Add bank statements router
+const budgetRouter = require('./routes/budget');
+const bankAccountsRouter = require('./routes/bank-accounts');
 const { max } = require('./models/shop/OrderStatusHistory');
 
 const app = express();
@@ -113,7 +115,8 @@ if (config.db.sync) {
         MonitoringService.trackError('database_sync_error', { error: error.message });
     });
 } else {
-    LoggingService.logDebug('Database sync skipped (DB_SYNC=false)');
+    // Uncomment this line to enable logging
+    // LoggingService.logDebug('Database sync skipped (DB_SYNC=false)');
 }
 
 // Routes
@@ -126,6 +129,8 @@ app.use('/api/monitoring', monitoringRouter);
 app.use('/api/shop', shopRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/bank-statements', bankStatementsRouter); // Add bank statements route
+app.use('/api/budget', budgetRouter);
+app.use('/api/bank-accounts', bankAccountsRouter);
 
 // Finance routes
 app.use('/api/finance', financeRouter);
