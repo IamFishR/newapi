@@ -1,5 +1,4 @@
 const { BankAccount, Transaction, sequelize } = require('../models');
-const { Op } = require('sequelize');
 const LoggingService = require('./monitoring/LoggingService');
 
 class BankAccountService {

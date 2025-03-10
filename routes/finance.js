@@ -18,6 +18,26 @@ const {
 // Apply API rate limiter to all routes
 router.use(apiLimiter);
 
+// overview
+router.get('/overview', auth.isAuthenticated, async (req, res, next) => {
+    try {
+
+        const { status, limit, offset } = req.query;
+        const accounts = await BankAccountService.getUserAccounts(req.user.id, { status, limit, offset });
+        const transactions = await TransactionService.getUserTransactions(req.user.id, { status, limit, offset });
+        // const debts = await DebtService.getUserDebts(req.user.id, { status, limit, offset });
+
+        res.json({
+            accountInfo: accounts.rows,
+            transactions: transactions.rows,
+            // debts: debts.rows,
+        });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get financial overview' });
+        next(error);
+    }
+});
+
 // Financial Profile Routes
 // Setup route to handle complete financial setup
 router.post('/setup', auth.isAuthenticated, async (req, res, next) => {
@@ -178,7 +198,7 @@ router.post('/budget/transactions/bulk', auth.isAuthenticated, async (req, res, 
         }
 
         // Validate basic transaction structure
-        const invalidTransactions = transactions.filter(t => 
+        const invalidTransactions = transactions.filter(t =>
             !t.description || !t.amount || !t.date
         );
 
@@ -217,7 +237,7 @@ router.post('/budget/transactions/bulk', auth.isAuthenticated, async (req, res, 
             userId: req.user.id,
             accountId: req.body.account_id
         });
-        
+
         // Send a more specific error message
         return res.status(500).json({
             success: false,

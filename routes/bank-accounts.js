@@ -49,7 +49,7 @@ router.get('/', auth.isAuthenticated, async (req, res, next) => {
         const accounts = await BankAccountService.getUserAccounts(req.user.id, { status, limit, offset });
         res.json({
             success: true,
-            data: accounts
+            data: accounts.rows,
         });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get all user bank accounts' });
@@ -97,7 +97,7 @@ router.get('/:id', auth.isAuthenticated, async (req, res, next) => {
         }
         res.json({
             success: true,
-            data: account
+            data: account.rows
         });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get bank account by ID' });
