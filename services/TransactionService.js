@@ -42,20 +42,20 @@ class TransactionService {
      * @returns {Promise<Object>} - List of transactions and count
      */
     async getUserTransactions(userId, options = {}) {
-        const { 
-            categoryId, 
+        const {
+            categoryId,
             accountId,
-            type, 
-            startDate, 
-            endDate, 
-            limit = 20, 
+            type,
+            startDate,
+            endDate,
+            limit = 20,
             offset = 0,
             sortBy = 'date',
             sortOrder = 'DESC'
         } = options;
-        
+
         const where = { user_id: userId };
-        
+
         if (categoryId) {
             where.category_id = categoryId;
         }
@@ -63,11 +63,11 @@ class TransactionService {
         if (accountId) {
             where.account_id = accountId;
         }
-        
+
         if (type) {
             where.type = type;
         }
-        
+
         if (startDate || endDate) {
             where.date = {};
             if (startDate) {
@@ -77,11 +77,11 @@ class TransactionService {
                 where.date[Op.lte] = new Date(endDate);
             }
         }
-        
+
         const orderColumn = sortBy === 'amount' || sortBy === 'date' ? sortBy : 'date';
         const order = [[orderColumn, sortOrder]];
-        
-        return Transaction.findAndCountAll({
+
+        const transactions = await Transaction.findAndCountAll({
             where,
             order,
             limit,
@@ -89,15 +89,23 @@ class TransactionService {
             include: [
                 {
                     model: BudgetCategory,
-                    as: 'category'
-                },
-                {
-                    model: BankAccount,
-                    as: 'account',
-                    attributes: ['id', 'account_number', 'bank_name', 'account_name']
+                    as: 'category',
+                    attributes: ['name']
                 }
             ]
         });
+
+        // Map the category name directly to the category field
+        const mappedTransactions = transactions.rows.map(transaction => {
+            const transactionData = transaction.get({ plain: true });
+            transactionData.category = transactionData.category ? transactionData.category.name : null;
+            return transactionData;
+        });
+
+        return {
+            count: transactions.count,
+            rows: mappedTransactions
+        };
     }
 
     /**
@@ -109,32 +117,32 @@ class TransactionService {
      */
     async updateTransaction(id, updateData) {
         const transaction = await Transaction.findByPk(id);
-        
+
         if (!transaction) {
             throw new Error('Transaction not found');
         }
-        
+
         const oldAccountId = transaction.account_id;
         const newAccountId = updateData.account_id;
-        
+
         // Update the transaction
         await transaction.update(updateData);
-        
+
         // If account_id was changed, update the balances of both old and new accounts
         if (oldAccountId !== newAccountId) {
             const BankAccountService = require('./BankAccountService');
-            
+
             // Update old account balance if it exists
             if (oldAccountId) {
                 await BankAccountService.updateAccountBalance(oldAccountId);
             }
-            
+
             // Update new account balance if it exists
             if (newAccountId) {
                 await BankAccountService.updateAccountBalance(newAccountId);
             }
         }
-        
+
         return transaction;
     }
 
@@ -146,21 +154,21 @@ class TransactionService {
      */
     async deleteTransaction(id) {
         const transaction = await Transaction.findByPk(id);
-        
+
         if (!transaction) {
             throw new Error('Transaction not found');
         }
-        
+
         const accountId = transaction.account_id;
-        
+
         // Delete the transaction
         await transaction.destroy();
-        
+
         // Update account balance if this transaction was associated with an account
         if (accountId) {
             await BankAccountService.updateAccountBalance(accountId);
         }
-        
+
         return true;
     }
 
@@ -174,33 +182,33 @@ class TransactionService {
      */
     async processBulkTransactions(userId, transactions, accountId) {
         const dbTransaction = await sequelize.transaction();
-        
+
         try {
             // Validate that the account belongs to the user
             if (accountId) {
                 const BankAccountService = require('./BankAccountService');
                 const account = await BankAccountService.getAccountById(accountId);
-                
+
                 if (!account) {
                     throw new Error('Bank account not found');
                 }
-                
+
                 if (account.user_id !== userId) {
                     throw new Error('You do not have permission to access this account');
                 }
             }
-            
+
             // First, get all existing categories for this user
             const categories = await BudgetCategory.findAll({
                 where: { user_id: userId }
             });
-            
+
             // Map of category name -> category id for quick lookup
             const categoryMap = new Map();
             categories.forEach(category => {
                 categoryMap.set(category.name.toLowerCase(), category.id);
             });
-            
+
             // Find existing transactions with same description, amount and date to avoid duplicates
             // Creating a signature for each transaction using description + amount + date
             const existingTransactions = await Transaction.findAll({
@@ -211,7 +219,7 @@ class TransactionService {
                 },
                 raw: true
             });
-            
+
             const existingSignatures = new Set();
             existingTransactions.forEach(tx => {
                 // Create a signature combining description, amount, and date to detect duplicates
@@ -219,30 +227,30 @@ class TransactionService {
                 const signature = `${tx.description}|${tx.amount}|${date}`;
                 existingSignatures.add(signature);
             });
-            
+
             // Process each transaction
             const processedTransactions = [];
-            
+
             for (const txData of transactions) {
                 // Basic validation
                 if (!txData.description || !txData.amount || !txData.date) {
                     continue; // Skip invalid transactions
                 }
-                
+
                 // Create a signature for this transaction to check for duplicates
                 const date = new Date(txData.date).toISOString().split('T')[0];
                 const signature = `${txData.description}|${txData.amount}|${date}`;
-                
+
                 // Skip if it's a duplicate
                 if (existingSignatures.has(signature)) {
                     continue;
                 }
-                
+
                 // Find or create a category for this transaction
                 let categoryId;
                 if (txData.category) {
                     const categoryNameLower = txData.category.toLowerCase();
-                    
+
                     // Check if the category already exists
                     if (categoryMap.has(categoryNameLower)) {
                         categoryId = categoryMap.get(categoryNameLower);
@@ -253,7 +261,7 @@ class TransactionService {
                             name: txData.category,
                             is_default: false
                         }, { transaction: dbTransaction });
-                        
+
                         // Add to our map
                         categoryId = newCategory.id;
                         categoryMap.set(categoryNameLower, categoryId);
@@ -261,9 +269,9 @@ class TransactionService {
                 } else {
                     // Use "Other" category if not specified
                     // Try to find a default "Other" category first
-                    let otherCategory = categories.find(c => 
+                    let otherCategory = categories.find(c =>
                         c.name.toLowerCase() === 'other' || c.name.toLowerCase() === 'miscellaneous');
-                    
+
                     if (!otherCategory) {
                         // Create an "Other" category if it doesn't exist
                         otherCategory = await BudgetCategory.create({
@@ -272,10 +280,10 @@ class TransactionService {
                             is_default: true
                         }, { transaction: dbTransaction });
                     }
-                    
+
                     categoryId = otherCategory.id;
                 }
-                
+
                 // Create the transaction
                 const newTransaction = await Transaction.create({
                     user_id: userId,
@@ -287,13 +295,13 @@ class TransactionService {
                     date: new Date(txData.date),
                     recurring_type: 'none'
                 }, { transaction: dbTransaction });
-                
+
                 processedTransactions.push(newTransaction);
-                
+
                 // Add to our set of signatures to avoid duplicates within this batch
                 existingSignatures.add(signature);
             }
-            
+
             await dbTransaction.commit();
             return processedTransactions;
         } catch (error) {
@@ -311,13 +319,13 @@ class TransactionService {
      */
     async getTransactionsByAccountId(accountId, options = {}) {
         const { startDate, endDate, limit = 20, offset = 0, type } = options;
-        
+
         const where = { account_id: accountId };
-        
+
         if (type) {
             where.type = type;
         }
-        
+
         if (startDate || endDate) {
             where.date = {};
             if (startDate) {
@@ -327,7 +335,7 @@ class TransactionService {
                 where.date[Op.lte] = new Date(endDate);
             }
         }
-        
+
         return Transaction.findAndCountAll({
             where,
             order: [['date', 'DESC']],
@@ -351,16 +359,16 @@ class TransactionService {
      */
     async assignTransactionsToAccount(accountId, transactionIds) {
         const transaction = await sequelize.transaction();
-        
+
         try {
             // Check if account exists
             const BankAccountService = require('./BankAccountService');
             const account = await BankAccountService.getAccountById(accountId);
-            
+
             if (!account) {
                 throw new Error('Bank account not found');
             }
-            
+
             // Bulk update the transactions
             const result = await Transaction.update(
                 { account_id: accountId },
@@ -374,12 +382,12 @@ class TransactionService {
                     transaction
                 }
             );
-            
+
             // Update the account balance
             await BankAccountService.updateAccountBalance(accountId);
-            
+
             await transaction.commit();
-            
+
             return {
                 updatedCount: result[0],
                 accountId,
@@ -400,13 +408,13 @@ class TransactionService {
      */
     async getTransactionStats(userId, options = {}) {
         const { startDate, endDate, accountId } = options;
-        
+
         const where = { user_id: userId };
-        
+
         if (accountId) {
             where.account_id = accountId;
         }
-        
+
         if (startDate || endDate) {
             where.date = {};
             if (startDate) {
@@ -416,7 +424,7 @@ class TransactionService {
                 where.date[Op.lte] = new Date(endDate);
             }
         }
-        
+
         // Get total income
         const totalIncome = await Transaction.sum('amount', {
             where: {
@@ -424,7 +432,7 @@ class TransactionService {
                 type: 'income'
             }
         }) || 0;
-        
+
         // Get total expenses
         const totalExpenses = await Transaction.sum('amount', {
             where: {
@@ -432,7 +440,7 @@ class TransactionService {
                 type: 'expense'
             }
         }) || 0;
-        
+
         // Get transaction counts
         const incomeCount = await Transaction.count({
             where: {
@@ -440,14 +448,14 @@ class TransactionService {
                 type: 'income'
             }
         });
-        
+
         const expenseCount = await Transaction.count({
             where: {
                 ...where,
                 type: 'expense'
             }
         });
-        
+
         return {
             totalIncome,
             totalExpenses,

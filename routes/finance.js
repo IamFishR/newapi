@@ -19,19 +19,164 @@ const {
 router.use(apiLimiter);
 
 // overview
-router.get('/overview', auth.isAuthenticated, async (req, res, next) => {
+router.post('/overview', auth.isAuthenticated, async (req, res, next) => {
     try {
 
-        const { status, limit, offset } = req.query;
-        const accounts = await BankAccountService.getUserAccounts(req.user.id, { status, limit, offset });
-        const transactions = await TransactionService.getUserTransactions(req.user.id, { status, limit, offset });
+        const { status, limit, offset, accountId } = req.body;
+        const accounts = await BankAccountService.getAccountById(accountId);
+        const transactions = await TransactionService.getUserTransactions(req.user.id, { status, limit, offset, accountId });
         // const debts = await DebtService.getUserDebts(req.user.id, { status, limit, offset });
-
-        res.json({
-            accountInfo: accounts.rows,
+        const response = {
+            accountInfo: accounts,
+            summary: {
+                openingBalance: accounts.opening_balance,
+                totalDebits: 79785.89,
+                totalCredits: 1663.6,
+                closingBalance: 49129.87,
+                debitCount: 81,
+                creditCount: 2
+            },
             transactions: transactions.rows,
-            // debts: debts.rows,
-        });
+            analytics: {
+                burnRate: 4432.55,
+                daysToZero: 11.1,
+                trend: "Downward (-61.4%)",
+                leveragePoints: [
+                    {
+                        desc: "ATW-526099XXXXXX6724-S1ANHY01-HYDERABAD",
+                        amount: 15000,
+                        action: "Switch to digital payments"
+                    },
+                    {
+                        desc: "DC 1019060028639178 AUTOPAY SI-TAD",
+                        amount: 14444.31,
+                        action: "Cut by 30% (4333.29 INR saving)"
+                    },
+                    {
+                        desc: "UPI-SMART BAZAAR  HYDERA-2306667041393-01@JIOPAY-ICIC0000541-503326592264-UPI",
+                        amount: 12383.09,
+                        action: "Cut by 30% (3714.93 INR saving)"
+                    }
+                ],
+                dailySpending: [
+                    {
+                        date: "2025-02-01",
+                        amount: 591.8399999999999
+                    },
+                    {
+                        date: "2025-02-02",
+                        amount: 22038.59
+                    }
+                ],
+                incomeByCategory: [
+                    {
+                        category: "Other",
+                        totalAmount: 1663.6,
+                        count: 2,
+                        percentage: 100,
+                        topTransactions: [
+                            {
+                                date: "2025-02-13",
+                                amount: 1033.6,
+                                description: "UPI-IRCTCAPPUPI-PAYTM-76208552@PTYBL-YESB0PTMUPI-504417498548-COLLECT"
+                            },
+                            {
+                                date: "2025-02-13",
+                                amount: 630,
+                                description: "UPI-PHONEPE-PHONEPEMERCHANT@YESBANK-YESB0000022-504440319260-R02 PHONEPE REVERS"
+                            }
+                        ]
+                    }
+                ],
+                recurringTransactions: [
+                    {
+                        merchant: "M WAHEEDUDDIN  SIDDI",
+                        frequency: "daily",
+                        averageAmount: 85,
+                        category: "Other",
+                        count: 10,
+                        lastTransactionDate: "2025-02-13"
+                    }
+                ],
+                topMerchants: [
+                    {
+                        name: "SMART BAZAAR  HYDERA",
+                        count: 4,
+                        amount: 16091.59
+                    }
+                ]
+            },
+            profile: {
+                income: {
+                    monthly: 55.45333333333333,
+                    sources: [
+                        {
+                            source: "Other",
+                            amount: 55.45333333333333,
+                            frequency: "monthly"
+                        }
+                    ],
+                    trend: -10
+                },
+                expenses: {
+                    monthly: 2659.5296666666663,
+                    recurring: [
+                        {
+                            merchant: "M WAHEEDUDDIN  SIDDI",
+                            frequency: "daily",
+                            averageAmount: 85,
+                            category: "Other",
+                            count: 10,
+                            lastTransactionDate: "2025-02-13"
+                        }
+                    ],
+                    categories: [
+                        {
+                            category: "Other",
+                            totalAmount: 37923.31,
+                            count: 42,
+                            percentage: 47.531349214754634,
+                            topTransactions: [
+                                {
+                                    date: "2025-02-05",
+                                    amount: 14444.31,
+                                    description: "DC 1019060028639178 AUTOPAY SI-TAD"
+                                },
+                                {
+                                    date: "2025-02-02",
+                                    amount: 5000,
+                                    description: "UPI-RATNAMALA HARIBHAU S-SURYAWANSHIRATNAMALA@OKICICI-ICIC0001461-503343852820-UPI"
+                                },
+                                {
+                                    date: "2025-02-10",
+                                    amount: 5000,
+                                    description: "ACH D- INDIAN CLEARING CORP-000000QQTYEX"
+                                }
+                            ]
+                        }
+                    ],
+                    trend: -10
+                },
+                savings: {
+                    current: 49129.87,
+                    rate: -156.5325999839705,
+                    projection: [
+                        {
+                            month: "2025-04",
+                            amount: 46525.79366666667
+                        }
+                    ]
+                },
+                budget: {
+                    needs: 89.19210457219113,
+                    wants: 10.807895427808862,
+                    savings: 0,
+                    analysis: "High essential expenses"
+                }
+            }
+        }
+
+        res.json({ status: 'success', data: response });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get financial overview' });
         next(error);
