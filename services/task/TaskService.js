@@ -1,5 +1,7 @@
 const { sequelize } = require('../../config/sequelize');
+const { Op } = require('sequelize');
 const { Task, Project, Sprint, User, TaskType, TaskPriority } = require('../../models');
+const ValidationError = require('../../utils/ValidationError');
 
 class TaskService {
   async listTasks(options) {
@@ -25,7 +27,7 @@ class TaskService {
           {
             model: User,
             as: 'assignee',
-            attributes: ['id', 'username', 'email'], // Changed from 'name' to match User model columns
+            attributes: ['id', 'username', 'email'],
             required: false
           },
           {
@@ -47,24 +49,24 @@ class TaskService {
         distinct: true
       };
 
-      // Add filters if they exist
       if (status) queryOptions.where.status = status;
       if (project_id) queryOptions.where.project_id = project_id;
       if (assigned_to) queryOptions.where.assigned_to = assigned_to;
 
-      // Add any other filters from otherOptions
       Object.keys(otherOptions).forEach(key => {
         if (otherOptions[key] !== undefined) {
-          const columnName = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          const columnName = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`); // convert camelCase to snake_case
           queryOptions.where[columnName] = otherOptions[key];
         }
       });
 
       const { count, rows } = await Task.findAndCountAll(queryOptions);
+
       const totalPages = Math.ceil(count / pageSize);
 
       return {
-        tasks: rows,
+        rows,
+        count,
         pagination: {
           currentPage: parseInt(page),
           pageSize: parseInt(pageSize),
@@ -79,11 +81,106 @@ class TaskService {
   }
 
   async createTask(data, userId) {
-    // Implementation for createTask
+    const transaction = await sequelize.transaction();
+    try {
+      // Validate and convert priority name to ID
+      if (data.priority && !data.priority_id) {
+        const priority = await TaskPriority.findOne({
+          where: sequelize.where(
+            sequelize.fn('LOWER', sequelize.col('name')),
+            sequelize.fn('LOWER', data.priority)
+          ),
+          attributes: ['id', 'name']
+        });
+        if (!priority) {
+          throw new ValidationError('Invalid priority. Please select from: Critical, High, Medium, Low');
+        }
+        data.priority_id = priority.id;
+      }
+
+      // Validate and convert or use default task type
+      if (!data.type_id) {
+        if (data.type) {
+          const taskType = await TaskType.findOne({
+            where: sequelize.where(
+              sequelize.fn('LOWER', sequelize.col('name')),
+              sequelize.fn('LOWER', data.type)
+            ),
+            attributes: ['id', 'name']
+          });
+          if (!taskType) {
+            throw new ValidationError('Invalid task type. Please select from: Task, Bug, Feature, Epic, Story');
+          }
+          data.type_id = taskType.id;
+        } else {
+          const defaultType = await TaskType.findOne({
+            where: { name: 'Task' },
+            attributes: ['id']
+          });
+          if (!defaultType) {
+            throw new ValidationError('Default task type not found. Please specify a task type.');
+          }
+          data.type_id = defaultType.id;
+        }
+      }
+
+      // Set required fields and defaults
+      data.created_by = userId;
+      data.reporter = userId;
+      // Set assignee as creator if not specified
+      if (!data.assigned_to) {
+        data.assigned_to = userId;
+      }
+
+      const task = await Task.create(data, { transaction });
+      await this.createAuditLog('CREATE', task.id, null, task.toJSON(), userId, transaction);
+      await transaction.commit();
+      return this.getTask(task.id);
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.createTask:', error);
+      throw error;
+    }
   }
 
   async getTask(id) {
-    // Implementation for getTask
+    return await Task.findByPk(id, {
+      include: [
+        {
+          model: Project,
+          as: 'project',
+          attributes: ['id', 'name']
+        },
+        {
+          model: Sprint,
+          as: 'sprint',
+          attributes: ['id', 'name']
+        },
+        {
+          model: User,
+          as: 'assignee',
+          attributes: ['id', 'username', 'email']
+        },
+        {
+          model: TaskType,
+          as: 'type',
+          attributes: ['id', 'name']
+        },
+        {
+          model: TaskPriority,
+          as: 'priority',
+          attributes: ['id', 'name']
+        },
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'username', 'email']
+        }
+      ]
+    });
   }
 
   async updateTask(id, data, userId) {

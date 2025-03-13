@@ -3,28 +3,7 @@ const { Op } = require('sequelize');
 const LoggingService = require('../monitoring/LoggingService');
 
 class ProjectService {
-    async createProject(data, userId) {
-        const transaction = await sequelize.transaction();
-        try {
-            data.created_by = userId;
-            const project = await Project.create(data, { transaction });
-
-            // Add creator as project owner
-            await project.addMember(userId, {
-                through: { role: 'owner' },
-                transaction
-            });
-
-            await transaction.commit();
-            return this.getProject(project.id);
-        } catch (error) {
-            await transaction.rollback();
-            LoggingService.logError(error, { context: 'Create project' });
-            throw error;
-        }
-    }
-
-    async getProject(id, includeMembers = true) {
+    async getProject(idOrSlug, includeMembers = true) {
         const include = [
             {
                 model: User,
@@ -42,11 +21,42 @@ class ProjectService {
             });
         }
 
-        const project = await Project.findByPk(id, { include });
+        const where = isNaN(idOrSlug) 
+            ? { code: idOrSlug }  // Use code field for slug
+            : { id: idOrSlug };   // Use ID if numeric
+
+        const project = await Project.findOne({ where, include });
         if (!project) {
             throw new Error('Project not found');
         }
         return project;
+    }
+
+    async createProject(data, userId) {
+        const transaction = await sequelize.transaction();
+        try {
+            // Set creator
+            data.created_by = userId;
+
+            // Create the project
+            const project = await Project.create(data, { transaction });
+
+            // Add creator as project member with 'owner' role
+            await project.addMember(userId, {
+                through: { role: 'owner' },
+                transaction
+            });
+
+            // Log project creation in audit
+            await this.createAuditLog('CREATE', project.id, null, project.toJSON(), userId, transaction);
+
+            await transaction.commit();
+            return this.getProject(project.id);
+        } catch (error) {
+            await transaction.rollback();
+            LoggingService.logError(error, { context: 'Create project' });
+            throw error;
+        }
     }
 
     async updateProject(id, data, userId) {

@@ -23,7 +23,10 @@ const errorMiddleware = (err, req, res, next) => {
         return res.status(400).json({
             status: 'fail',
             message: 'Validation Error',
-            errors: err.details
+            errors: err.details || [{
+                field: err.path || 'unknown',
+                message: err.message
+            }]
         });
     }
 

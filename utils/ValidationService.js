@@ -182,46 +182,71 @@ const schemas = {
 
 // Convert task management schemas to Joi format
 const taskSchemas = {
-    project: Joi.object({
-        name: Joi.string().min(1).max(100).required(),
-        code: Joi.string().min(1).max(10).required(),
-        description: Joi.string(),
-        start_date: Joi.date(),
-        end_date: Joi.date(),
-        status: Joi.string().valid('active', 'completed', 'on_hold', 'cancelled')
-    }),
-
-    projectUpdate: Joi.object({
-        name: Joi.string().min(1).max(100),
-        code: Joi.string().min(1).max(10),
-        description: Joi.string(),
-        start_date: Joi.date(),
-        end_date: Joi.date(),
-        status: Joi.string().valid('active', 'completed', 'on_hold', 'cancelled')
-    }),
-
-    sprint: Joi.object({
-        project_id: Joi.number().integer().required(),
-        name: Joi.string().min(1).max(100).required(),
-        goal: Joi.string(),
-        start_date: Joi.date(),
-        end_date: Joi.date(),
-        status: Joi.string().valid('planned', 'active', 'completed', 'cancelled')
-    }),
-
     task: Joi.object({
-        project_id: Joi.number().integer().required(),
-        sprint_id: Joi.number().integer(),
-        parent_task_id: Joi.number().integer(),
-        type_id: Joi.number().integer().required(),
-        priority_id: Joi.number().integer().required(),
-        title: Joi.string().min(1).max(200).required(),
-        description: Joi.string(),
-        status: Joi.string().valid('todo', 'in_progress', 'in_review', 'done', 'cancelled'),
-        estimated_hours: Joi.number().min(0),
-        assigned_to: Joi.number().integer(),
-        reporter: Joi.number().integer(),
+        project_id: Joi.number().integer().required()
+            .messages({
+                'number.base': 'Project ID must be a number',
+                'any.required': 'Project ID is required'
+            }),
+        sprint_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Sprint ID must be a number'
+            }),
+        parent_task_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Parent task ID must be a number'
+            }),
+        type_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Task type ID must be a number'
+            }),
+        type: Joi.string()
+            .valid('Task', 'Bug', 'Feature', 'Epic', 'Story')
+            .messages({
+                'any.only': 'Task type must be one of: Task, Bug, Feature, Epic, Story'
+            }),
+        priority_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Priority ID must be a number'
+            }),
+        priority: Joi.string()
+            .valid('Critical', 'High', 'Medium', 'Low')
+            .messages({
+                'any.only': 'Priority must be one of: Critical, High, Medium, Low'
+            }),
+        title: Joi.string().min(1).max(200).required()
+            .messages({
+                'string.min': 'Title cannot be empty',
+                'string.max': 'Title cannot be longer than 200 characters',
+                'any.required': 'Title is required'
+            }),
+        description: Joi.string().allow('', null)
+            .messages({
+                'string.base': 'Description must be text'
+            }),
+        status: Joi.string().valid('todo', 'in_progress', 'in_review', 'done', 'cancelled').default('todo')
+            .messages({
+                'any.only': 'Status must be one of: todo, in_progress, in_review, done, cancelled'
+            }),
+        estimated_hours: Joi.number().min(0)
+            .messages({
+                'number.base': 'Estimated hours must be a number',
+                'number.min': 'Estimated hours cannot be negative'
+            }),
         due_date: Joi.date()
+            .messages({
+                'date.base': 'Due date must be a valid date'
+            })
+    }).custom((obj, helpers) => {
+        // Either type_id or type must be provided
+        if (!obj.type_id && !obj.type) {
+            return helpers.message('Either task type ID or task type name must be provided');
+        }
+        // Either priority_id or priority must be provided
+        if (!obj.priority_id && !obj.priority) {
+            return helpers.message('Either priority ID or priority name must be provided');
+        }
+        return obj;
     })
 };
 
@@ -238,7 +263,12 @@ class ValidationService {
                 stripUnknown: true
             });
         } catch (error) {
-            throw new ValidationError(error.details.map(d => d.message).join(', '));
+            const validationError = new ValidationError('Validation Error');
+            validationError.details = error.details.map(detail => ({
+                field: detail.path.join('.'),
+                message: detail.message
+            }));
+            throw validationError;
         }
     }
 
