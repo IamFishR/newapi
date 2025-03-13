@@ -8,7 +8,12 @@ module.exports = (sequelize, DataTypes) => {
                 as: 'creator'
             });
             Project.belongsToMany(models.User, {
-                through: 'project_members',
+                through: {
+                    model: 'project_members',
+                    timestamps: true,
+                    createdAt: 'created_at',
+                    updatedAt: false
+                },
                 foreignKey: 'project_id',
                 as: 'members'
             });
