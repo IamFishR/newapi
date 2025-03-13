@@ -68,8 +68,10 @@ module.exports = (sequelize, DataTypes) => {
         modelName: 'Project',
         tableName: 'projects',
         timestamps: true,
+        paranoid: true,
         createdAt: 'created_at',
         updatedAt: 'updated_at',
+        deletedAt: 'deleted_at',
         indexes: [
             {
                 fields: ['status']
