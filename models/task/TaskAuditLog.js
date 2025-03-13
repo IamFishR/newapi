@@ -7,6 +7,10 @@ module.exports = (sequelize, DataTypes) => {
                 foreignKey: 'created_by',
                 as: 'user'
             });
+            TaskAuditLog.belongsTo(models.Task, {
+                foreignKey: 'task_id',
+                as: 'task'
+            });
         }
     }
 
@@ -16,23 +20,29 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true,
             autoIncrement: true
         },
-        entity_type: {
-            type: DataTypes.STRING(20),
-            allowNull: false
-        },
-        entity_id: {
-            type: DataTypes.STRING(50),
-            allowNull: false
+        task_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            references: {
+                model: 'tasks',
+                key: 'id'
+            }
         },
         action: {
             type: DataTypes.STRING(50),
             allowNull: false
         },
-        old_values: {
-            type: DataTypes.JSON
+        field: {
+            type: DataTypes.STRING(50),
+            allowNull: true
         },
-        new_values: {
-            type: DataTypes.JSON
+        old_value: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
+        new_value: {
+            type: DataTypes.TEXT,
+            allowNull: true
         },
         created_by: {
             type: DataTypes.INTEGER,
@@ -48,15 +58,7 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'task_audit_logs',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: false,
-        indexes: [
-            {
-                fields: ['entity_type', 'entity_id']
-            },
-            {
-                fields: ['created_at']
-            }
-        ]
+        updatedAt: 'updated_at'
     });
 
     return TaskAuditLog;

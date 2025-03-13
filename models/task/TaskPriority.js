@@ -40,7 +40,9 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'task_priorities',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: false
+        updatedAt: 'updated_at',
+        paranoid: true,
+        deletedAt: 'deleted_at'
     });
 
     return TaskPriority;

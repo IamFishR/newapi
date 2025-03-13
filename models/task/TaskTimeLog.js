@@ -36,16 +36,17 @@ module.exports = (sequelize, DataTypes) => {
                 key: 'id'
             }
         },
-        description: {
-            type: DataTypes.TEXT
-        },
         logged_date: {
-            type: DataTypes.DATEONLY,
+            type: DataTypes.DATE,
             allowNull: false
         },
         hours_spent: {
-            type: DataTypes.DECIMAL(5,2),
+            type: DataTypes.DECIMAL(5, 2),
             allowNull: false
+        },
+        description: {
+            type: DataTypes.TEXT,
+            allowNull: true
         }
     }, {
         sequelize,
@@ -53,18 +54,7 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'task_time_logs',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: 'updated_at',
-        indexes: [
-            {
-                fields: ['task_id']
-            },
-            {
-                fields: ['user_id']
-            },
-            {
-                fields: ['logged_date']
-            }
-        ]
+        updatedAt: 'updated_at'
     });
 
     return TaskTimeLog;

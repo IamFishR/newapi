@@ -192,40 +192,45 @@ class ProjectService {
     }
 
     async getProjectMetrics(projectId) {
-        const project = await Project.findByPk(projectId, {
-            include: [
-                {
-                    model: Task,
-                    as: 'tasks',
-                    attributes: ['status', 'estimated_hours', 'actual_hours']
-                },
-                {
-                    model: Sprint,
-                    as: 'sprints',
-                    attributes: ['status']
-                }
-            ]
-        });
+        try {
+            const project = await Project.findByPk(projectId, {
+                include: [
+                    {
+                        model: Task,
+                        as: 'tasks',
+                        attributes: ['status', 'estimated_hours', 'actual_hours']
+                    },
+                    {
+                        model: Sprint,
+                        as: 'sprints',
+                        attributes: ['status']
+                    }
+                ]
+            });
 
-        if (!project) {
-            throw new Error('Project not found');
+            if (!project) {
+                throw new Error('Project not found');
+            }
+
+            const tasks = project.tasks || [];
+            const sprints = project.sprints || [];
+
+            return {
+                totalTasks: tasks.length,
+                tasksByStatus: tasks.reduce((acc, task) => {
+                    acc[task.status] = (acc[task.status] || 0) + 1;
+                    return acc;
+                }, {}),
+                completedTasks: tasks.filter(task => task.status === 'done').length,
+                totalSprints: sprints.length,
+                activeSprints: sprints.filter(sprint => sprint.status === 'active').length,
+                estimatedHours: tasks.reduce((sum, task) => sum + (task.estimated_hours || 0), 0),
+                actualHours: tasks.reduce((sum, task) => sum + (task.actual_hours || 0), 0)
+            };
+        } catch (error) {
+            LoggingService.logError(error, { context: 'getProjectMetrics', projectId });
+            throw error;
         }
-
-        const tasks = project.tasks || [];
-        const sprints = project.sprints || [];
-
-        return {
-            totalTasks: tasks.length,
-            tasksByStatus: tasks.reduce((acc, task) => {
-                acc[task.status] = (acc[task.status] || 0) + 1;
-                return acc;
-            }, {}),
-            completedTasks: tasks.filter(task => task.status === 'done').length,
-            totalSprints: sprints.length,
-            activeSprints: sprints.filter(sprint => sprint.status === 'active').length,
-            estimatedHours: tasks.reduce((sum, task) => sum + (task.estimated_hours || 0), 0),
-            actualHours: tasks.reduce((sum, task) => sum + (task.actual_hours || 0), 0)
-        };
     }
 
     async createAuditLog(action, projectId, oldValues, newValues, userId, transaction) {

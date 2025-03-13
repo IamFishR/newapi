@@ -38,6 +38,7 @@ module.exports = (sequelize, DataTypes) => {
         },
         parent_comment_id: {
             type: DataTypes.INTEGER,
+            allowNull: true,
             references: {
                 model: 'task_comments',
                 key: 'id'
@@ -61,12 +62,7 @@ module.exports = (sequelize, DataTypes) => {
         tableName: 'task_comments',
         timestamps: true,
         createdAt: 'created_at',
-        updatedAt: 'updated_at',
-        indexes: [
-            {
-                fields: ['task_id']
-            }
-        ]
+        updatedAt: 'updated_at'
     });
 
     return TaskComment;
