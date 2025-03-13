@@ -247,6 +247,58 @@ const taskSchemas = {
             return helpers.message('Either priority ID or priority name must be provided');
         }
         return obj;
+    }),
+
+    // Add taskUpdate schema for PUT operations
+    taskUpdate: Joi.object({
+        sprint_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Sprint ID must be a number'
+            }),
+        parent_task_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Parent task ID must be a number'
+            }),
+        type_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Task type ID must be a number'
+            }),
+        type: Joi.string()
+            .valid('Task', 'Bug', 'Feature', 'Epic', 'Story')
+            .messages({
+                'any.only': 'Task type must be one of: Task, Bug, Feature, Epic, Story'
+            }),
+        priority_id: Joi.number().integer()
+            .messages({
+                'number.base': 'Priority ID must be a number'
+            }),
+        priority: Joi.string()
+            .valid('Critical', 'High', 'Medium', 'Low')
+            .messages({
+                'any.only': 'Priority must be one of: Critical, High, Medium, Low'
+            }),
+        title: Joi.string().min(1).max(200)
+            .messages({
+                'string.min': 'Title cannot be empty',
+                'string.max': 'Title cannot be longer than 200 characters'
+            }),
+        description: Joi.string().allow('', null)
+            .messages({
+                'string.base': 'Description must be text'
+            }),
+        status: Joi.string().valid('todo', 'in_progress', 'in_review', 'done', 'cancelled')
+            .messages({
+                'any.only': 'Status must be one of: todo, in_progress, in_review, done, cancelled'
+            }),
+        estimated_hours: Joi.number().min(0)
+            .messages({
+                'number.base': 'Estimated hours must be a number',
+                'number.min': 'Estimated hours cannot be negative'
+            }),
+        due_date: Joi.date()
+            .messages({
+                'date.base': 'Due date must be a valid date'
+            })
     })
 };
 

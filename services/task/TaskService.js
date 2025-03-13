@@ -185,6 +185,68 @@ class TaskService {
 
   async updateTask(id, data, userId) {
     // Implementation for updateTask
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(id);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Validate and convert priority name to ID
+      if (data.priority && !data.priority_id) {
+        const priority = await TaskPriority.findOne({
+          where: sequelize.where(
+            sequelize.fn('LOWER', sequelize.col('name')),
+            sequelize.fn('LOWER', data.priority)
+          ),
+          attributes: ['id', 'name']
+        });
+        if (!priority) {
+          throw new ValidationError('Invalid priority. Please select from: Critical, High, Medium, Low');
+        }
+        data.priority_id = priority.id;
+      }
+
+      // Validate and convert or use default task type
+      if (!data.type_id) {
+        if (data.type) {
+          const taskType = await TaskType.findOne({
+            where: sequelize.where(
+              sequelize.fn('LOWER', sequelize.col('name')),
+              sequelize.fn('LOWER', data.type)
+            ),
+            attributes: ['id', 'name']
+          });
+          if (!taskType) {
+            throw new ValidationError('Invalid task type. Please select from: Task, Bug, Feature, Epic, Story');
+          }
+          data.type_id = taskType.id;
+        } else {
+          const defaultType = await TaskType.findOne({
+            where: { name: 'Task' },
+            attributes: ['id']
+          });
+          if (!defaultType) {
+            throw new ValidationError('Default task type not found. Please specify a task type.');
+          }
+          data.type_id = defaultType.id;
+        }
+      }
+
+      // Update the task
+      await task.update(data, { transaction });
+
+      await this.createAuditLog('UPDATE', id, task.toJSON(), data, userId, transaction);
+      await transaction.commit();
+      return this.getTask(id);
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.updateTask:', error);
+      throw error;
+    }
   }
 
   async deleteTask(id, userId) {
