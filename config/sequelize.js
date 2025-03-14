@@ -1,4 +1,5 @@
 const validateConfig = require('./validate');
+const dbLoggingService = require('../services/monitoring/DbLoggingService');
 const config = validateConfig();
 const { Sequelize } = require('sequelize');
 
@@ -22,7 +23,7 @@ const environments = {
         database: config.db.name,
         host: config.db.host,
         dialect: 'mysql',
-        logging: console.log,
+        logging: dbLoggingService.createQueryLogger(),
         pool: {
             max: 5,
             min: 0,
@@ -46,7 +47,7 @@ const environments = {
         database: config.db.name,
         host: config.db.host,
         dialect: 'mysql',
-        logging: false,
+        logging: dbLoggingService.createQueryLogger(),
         pool: {
             max: 10,
             min: 2,

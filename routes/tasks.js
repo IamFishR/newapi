@@ -42,9 +42,20 @@ router.get('/projects', auth.isAuthenticated, async (req, res, next) => {
 router.get('/projects/:id', auth.isAuthenticated, async (req, res, next) => {
     try {
         const project = await ProjectService.getProject(req.params.id);
+        // task_priorities get
+        const taskPriorities = await TaskService.getTaskPriorities();
+        // task_types get
+        const taskTypes = await TaskService.getTaskTypes();
+        // task_statuses get
+        const taskStatuses = await TaskService.getTaskStatuses();
         res.json({
             status: 'success',
-            data: project
+            data: project,
+            configs: {
+                task_priorities: taskPriorities,
+                task_types: taskTypes,
+                task_statuses: taskStatuses
+            }
         });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get project' });
