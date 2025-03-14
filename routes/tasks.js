@@ -229,6 +229,13 @@ router.put('/tasks/:id', auth.isAuthenticated, async (req, res, next) => {
             data: task
         });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                status: 'fail',
+                message: error.message,
+                errors: error.details || [{ field: 'priority', message: error.message }]
+            });
+        }
         LoggingService.logError(error, { context: 'Update task' });
         next(error);
     }
