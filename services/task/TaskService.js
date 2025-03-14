@@ -1,6 +1,6 @@
 const { sequelize } = require('../../config/sequelize');
 const { Op } = require('sequelize');
-const { Task, Project, Sprint, User, TaskType, TaskPriority } = require('../../models');
+const { Task, Project, Sprint, User, TaskType, TaskPriority, TaskLabel } = require('../../models');
 const ValidationError = require('../../utils/ValidationError');
 
 class TaskService {
@@ -40,6 +40,15 @@ class TaskService {
             model: TaskPriority,
             as: 'priority',
             attributes: ['id', 'name'],
+            required: false
+          },
+          {
+            model: User,
+            as: 'watchers',
+            attributes: ['id', 'username', 'email'],
+            through: {
+              attributes: ['added_at']
+            },
             required: false
           }
         ],
@@ -178,6 +187,14 @@ class TaskService {
           model: User,
           as: 'creator',
           attributes: ['id', 'username', 'email']
+        },
+        {
+          model: User,
+          as: 'watchers',
+          attributes: ['id', 'username', 'email'],
+          through: {
+            attributes: ['added_at']
+          }
         }
       ]
     });
@@ -250,59 +267,455 @@ class TaskService {
   }
 
   async deleteTask(id, userId) {
-    // Implementation for deleteTask
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(id);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Log the deletion in the audit log
+      await this.createAuditLog('DELETE', id, task.toJSON(), null, userId, transaction);
+
+      // Delete the task
+      await task.destroy({ transaction });
+
+      await transaction.commit();
+      return { message: 'Task deleted successfully' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.deleteTask:', error);
+      throw error;
+    }
   }
 
   async addComment(taskId, content, userId) {
-    // Implementation for addComment
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Add the comment
+      const comment = await task.createComment({
+        content,
+        created_by: userId
+      }, { transaction });
+
+      // Log the addition of the comment in the audit log
+      await this.createAuditLog('ADD_COMMENT', taskId, null, { content }, userId, transaction);
+
+      await transaction.commit();
+      return comment;
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.addComment:', error);
+      throw error;
+    }
   }
 
   async addAttachment(taskId, fileData, userId) {
-    // Implementation for addAttachment
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Add the attachment
+      const attachment = await task.createAttachment({
+        file_name: fileData.fileName,
+        file_path: fileData.filePath,
+        uploaded_by: userId
+      }, { transaction });
+
+      // Log the addition of the attachment in the audit log
+      await this.createAuditLog('ADD_ATTACHMENT', taskId, null, { fileName: fileData.fileName }, userId, transaction);
+
+      await transaction.commit();
+      return attachment;
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.addAttachment:', error);
+      throw error;
+    }
   }
 
   async logTime(taskId, timeData, userId) {
-    // Implementation for logTime
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Log the time entry
+      const timeEntry = await task.createTimeLog({
+        hours: timeData.hours,
+        description: timeData.description,
+        logged_by: userId
+      }, { transaction });
+
+      // Log the addition of the time entry in the audit log
+      await this.createAuditLog('LOG_TIME', taskId, null, timeData, userId, transaction);
+
+      await transaction.commit();
+      return timeEntry;
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.logTime:', error);
+      throw error;
+    }
   }
 
   async addLabel(taskId, labelId, userId) {
-    // Implementation for addLabel
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Add the label to the task
+      await task.addLabel(labelId, { transaction });
+
+      // Log the addition of the label in the audit log
+      await this.createAuditLog('ADD_LABEL', taskId, null, { labelId }, userId, transaction);
+
+      await transaction.commit();
+      return { message: 'Label added successfully' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.addLabel:', error);
+      throw error;
+    }
   }
 
   async removeLabel(taskId, labelId, userId) {
-    // Implementation for removeLabel
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Remove the label from the task
+      await task.removeLabel(labelId, { transaction });
+
+      // Log the removal of the label in the audit log
+      await this.createAuditLog('REMOVE_LABEL', taskId, null, { labelId }, userId, transaction);
+
+      await transaction.commit();
+      return { message: 'Label removed successfully' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.removeLabel:', error);
+      throw error;
+    }
   }
 
   async addWatcher(taskId, watcherId, userId) {
-    // Implementation for addWatcher
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Add the watcher to the task
+      await task.addWatcher(watcherId, { transaction });
+
+      // Log the addition of the watcher in the audit log
+      await this.createAuditLog('ADD_WATCHER', taskId, null, { watcherId }, userId, transaction);
+
+      await transaction.commit();
+      return { message: 'Watcher added successfully' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.addWatcher:', error);
+      throw error;
+    }
   }
 
   async removeWatcher(taskId, watcherId, userId) {
-    // Implementation for removeWatcher
+    const transaction = await sequelize.transaction();
+    try {
+      const task = await Task.findByPk(taskId);
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Remove the watcher from the task
+      await task.removeWatcher(watcherId, { transaction });
+
+      // Log the removal of the watcher in the audit log
+      await this.createAuditLog('REMOVE_WATCHER', taskId, null, { watcherId }, userId, transaction);
+
+      await transaction.commit();
+      return { message: 'Watcher removed successfully' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Error in TaskService.removeWatcher:', error);
+      throw error;
+    }
   }
 
   async getTaskHistory(taskId) {
-    // Implementation for getTaskHistory
+    try {
+      const task = await Task.findByPk(taskId, {
+        include: [
+          {
+            model: AuditLog,
+            as: 'auditLogs',
+            attributes: ['action', 'old_values', 'new_values', 'created_at', 'created_by'],
+            order: [['created_at', 'DESC']]
+          }
+        ]
+      });
+
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      return task.auditLogs;
+    } catch (error) {
+      console.error('Error in TaskService.getTaskHistory:', error);
+      throw error;
+    }
   }
 
   async getTaskMetrics(taskId) {
-    // Implementation for getTaskMetrics
+    try {
+      const task = await Task.findByPk(taskId, {
+        include: [
+          {
+            model: TimeLog,
+            as: 'timeLogs',
+            attributes: ['hours']
+          },
+          {
+            model: Comment,
+            as: 'comments',
+            attributes: ['id']
+          },
+          {
+            model: Attachment,
+            as: 'attachments',
+            attributes: ['id']
+          }
+        ]
+      });
+
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      const totalHours = task.timeLogs.reduce((sum, log) => sum + log.hours, 0);
+      const totalComments = task.comments.length;
+      const totalAttachments = task.attachments.length;
+
+      return {
+        totalHours,
+        totalComments,
+        totalAttachments
+      };
+    } catch (error) {
+      console.error('Error in TaskService.getTaskMetrics:', error);
+      throw error;
+    }
   }
 
   async updateTaskMetrics(taskId, oldStatus, newStatus, transaction) {
-    // Implementation for updateTaskMetrics
+    try {
+      const task = await Task.findByPk(taskId, { transaction });
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      // Update metrics based on status change
+      if (oldStatus !== newStatus) {
+        await this.createAuditLog('STATUS_CHANGE', taskId, { status: oldStatus }, { status: newStatus }, null, transaction);
+      }
+
+      // Additional logic for updating metrics can be added here
+    } catch (error) {
+      console.error('Error in TaskService.updateTaskMetrics:', error);
+      throw error;
+    }
   }
 
   async updateCommentMetrics(taskId, transaction) {
-    // Implementation for updateCommentMetrics
+    try {
+      const task = await Task.findByPk(taskId, {
+        include: [
+          {
+            model: Comment,
+            as: 'comments',
+            attributes: ['id']
+          }
+        ],
+        transaction
+      });
+
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      const totalComments = task.comments.length;
+
+      // Update the task's comment metrics
+      await task.update({ total_comments: totalComments }, { transaction });
+    } catch (error) {
+      console.error('Error in TaskService.updateCommentMetrics:', error);
+      throw error;
+    }
   }
 
   async updateAttachmentMetrics(taskId, transaction) {
-    // Implementation for updateAttachmentMetrics
+    try {
+      const task = await Task.findByPk(taskId, {
+        include: [
+          {
+            model: Attachment,
+            as: 'attachments',
+            attributes: ['id']
+          }
+        ],
+        transaction
+      });
+
+      if (!task) {
+        throw new ValidationError('Task not found');
+      }
+
+      const totalAttachments = task.attachments.length;
+
+      // Update the task's attachment metrics
+      await task.update({ total_attachments: totalAttachments }, { transaction });
+    } catch (error) {
+      console.error('Error in TaskService.updateAttachmentMetrics:', error);
+      throw error;
+    }
   }
 
   async createAuditLog(action, taskId, oldValues, newValues, userId, transaction) {
-    // Implementation for createAuditLog
+    try {
+      const { AuditLog } = require('../../models');  // Using the correct import from models index
+
+      const logEntry = {
+        action,
+        entity_type: 'TASK',
+        entity_id: taskId.toString(),
+        old_values: oldValues ? JSON.stringify(oldValues) : null,
+        new_values: newValues ? JSON.stringify(newValues) : null,
+        user_id: userId,
+        created_at: new Date()
+      };
+
+      await AuditLog.create(logEntry, { transaction });
+    } catch (error) {
+      console.error('Error in createAuditLog:', error);
+      throw error;
+    }
+  }
+
+  async getTaskPriorities() {
+    try {
+        const priorities = await TaskPriority.findAll({
+            attributes: ['id', 'name'],
+            order: [['id', 'ASC']]
+        });
+        return priorities.map(priority => priority.name);
+    } catch (error) {
+        console.error('Error in TaskService.getTaskPriorities:', error);
+        throw error;
+    }
+  }
+
+  async getTaskTypes() {
+    try {
+        const types = await TaskType.findAll({
+            attributes: ['id', 'name'],
+            order: [['id', 'ASC']]
+        });
+        return types.map(type => type.name);
+    } catch (error) {
+        console.error('Error in TaskService.getTaskTypes:', error);
+        throw error;
+    }
+  }
+
+  async getTaskStatuses() {
+    try {
+        const statuses = await Task.findAll({
+            attributes: ['status'],
+            group: ['status'],
+            order: [['status', 'ASC']]
+        });
+        return statuses.map(status => status.status);
+    } catch (error) {
+        console.error('Error in TaskService.getTaskStatuses:', error);
+        throw error;
+    }
+  }
+
+  async getLabels(projectId) {
+    try {
+      const labels = await TaskLabel.findAll({
+        where: { project_id: projectId },
+        attributes: ['id', 'name'],
+        order: [['name', 'ASC']]
+      });
+      return labels.map(label => ({ id: label.id, name: label.name }));
+    } catch (error) {
+      console.error('Error in TaskService.getLabels:', error);
+      throw error;
+    }
+  }
+
+  async getWatchers(projectId) {
+    try {
+      const watchers = await Task.findAll({
+        where: { project_id: projectId },
+        include: [
+          {
+            model: User,
+            as: 'watchers',
+            attributes: ['id', 'username', 'email']
+          }
+        ]
+      });
+
+      return watchers.map(task => task.watchers).flat();
+    } catch (error) {
+      console.error('Error in TaskService.getWatchers:', error);
+      throw error;
+    }
   }
 }
 

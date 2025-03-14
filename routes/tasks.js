@@ -48,13 +48,25 @@ router.get('/projects/:id', auth.isAuthenticated, async (req, res, next) => {
         const taskTypes = await TaskService.getTaskTypes();
         // task_statuses get
         const taskStatuses = await TaskService.getTaskStatuses();
+        // sprints
+        const sprints = await SprintService.listSprints(req.params.id, req.query);
+        // members
+        const members = await ProjectService.getProjectMembers(req.params.id);
+        // labels
+        const labels = await TaskService.getLabels(req.params.id);
+        // watchers
+        // const watchers = await TaskService.getWatchers(req.params.id);
         res.json({
             status: 'success',
             data: project,
             configs: {
                 task_priorities: taskPriorities,
                 task_types: taskTypes,
-                task_statuses: taskStatuses
+                task_statuses: taskStatuses,
+                sprints: sprints,
+                labels: labels,
+                // watchers: watchers,
+                members: members
             }
         });
     } catch (error) {

@@ -71,8 +71,14 @@ module.exports = (sequelize, DataTypes) => {
                 as: 'labels'
             });
             Task.belongsToMany(models.User, {
-                through: 'task_watchers',
+                through: {
+                    model: 'task_watchers',
+                    timestamps: true,
+                    createdAt: 'added_at',
+                    updatedAt: false
+                },
                 foreignKey: 'task_id',
+                otherKey: 'user_id',
                 as: 'watchers'
             });
             Task.hasOne(models.TaskMetrics, {

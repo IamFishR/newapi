@@ -243,6 +243,21 @@ class ProjectService {
         }
     }
 
+    async getProjectMembers(projectId) {
+        try {
+            const project = await this.getProject(projectId);
+            return project.members.map(member => ({
+                id: member.id,
+                username: member.username,
+                email: member.email,
+                role: member.project_members.role
+            }));
+        } catch (error) {
+            LoggingService.logError(error, { context: 'getProjectMembers', projectId });
+            throw error;
+        }
+    }
+
     async createAuditLog(action, projectId, oldValues, newValues, userId, transaction) {
         await sequelize.models.TaskAuditLog.create({
             entity_type: 'project',
