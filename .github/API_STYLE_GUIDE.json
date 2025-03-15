@@ -1,0 +1,58 @@
+{
+    "apiStyleGuide": {
+        "generalGuidelines": {
+            "namingConventions": {
+                "routes": "Use kebab-case for route names (e.g., /user-profile).",
+                "variables": "Use camelCase for variables and function names.",
+                "constants": "Use UPPER_SNAKE_CASE for constants.",
+                "files": "Use kebab-case for file names (e.g., user-controller.js)."
+            },
+            "errorHandling": {
+                "standardFormat": "Use a consistent error response format with 'status', 'message', and 'details' fields.",
+                "logging": "Log all errors using a centralized logger."
+            },
+            "responseStructure": {
+                "success": "Always return a JSON object with 'status', 'data', and 'message' fields for successful responses.",
+                "error": "Always return a JSON object with 'status', 'error', and 'message' fields for errors."
+            }
+        },
+        "expressGuidelines": {
+            "middlewares": {
+                "usage": "Use middlewares for authentication, validation, and error handling.",
+                "folderStructure": "Store middlewares in a dedicated 'middlewares' folder."
+            },
+            "controllers": {
+                "structure": "Separate route logic into controllers. Each controller should handle a single responsibility.",
+                "folderStructure": "Store controllers in a 'controllers' folder."
+            },
+            "routes": {
+                "structure": "Group related routes into modules and store them in a 'routes' folder.",
+                "methodUsage": {
+                    "GET": "For fetching data.",
+                    "POST": "For creating new resources.",
+                    "PUT": "For updating existing resources.",
+                    "DELETE": "For deleting resources."
+                }
+            }
+        },
+        "databaseGuidelines": {
+            "mysql": {
+                "connection": "Use a centralized database connection file.",
+                "migrations": "Use migration scripts for schema changes and store them in a 'migrations' folder.",
+                "namingConventions": {
+                    "tables": "Use snake_case for table names.",
+                    "columns": "Use snake_case for column names."
+                }
+            }
+        },
+        "securityGuidelines": {
+            "authentication": "Use JWT for authentication.",
+            "inputValidation": "Validate all user inputs using a library like Joi or express-validator.",
+            "headers": "Set secure HTTP headers using a library like helmet."
+        },
+        "documentationGuidelines": {
+            "apiDocs": "Use Swagger or Postman to document APIs.",
+            "comments": "Add comments to explain complex logic in the code."
+        }
+    }
+}

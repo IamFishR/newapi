@@ -12,7 +12,11 @@ const {
     GoalsService,
     InvestmentService,
     NetWorthService,
-    TaxService
+    TaxService,
+    CreditCardService,
+    IncomeService,
+    SavingsService,
+    FinancialHealthService
 } = require('../services/finance');
 
 // Apply API rate limiter to all routes
@@ -619,6 +623,210 @@ router.get('/tax/estimates', auth.isAuthenticated, async (req, res, next) => {
         res.json({ status: 'success', data: estimates });
     } catch (error) {
         LoggingService.logError(error, { context: 'Get tax estimates' });
+        next(error);
+    }
+});
+
+// Enhanced setup route to handle complete financial setup
+router.post('/setup', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const validatedData = await ValidationService.validate('financialProfile', req.body);
+        
+        // Process each component in parallel
+        const [accounts, cards, income, savings, expenses] = await Promise.all([
+            // Process bank accounts
+            validatedData.bankAccounts?.length > 0 
+                ? BankAccountService.bulkCreateAccounts(req.user.id, validatedData.bankAccounts)
+                : [],
+            
+            // Process credit cards
+            validatedData.creditCards?.length > 0
+                ? CreditCardService.bulkCreateCards(req.user.id, validatedData.creditCards)
+                : [],
+            
+            // Process income sources
+            validatedData.incomes?.length > 0
+                ? IncomeService.bulkCreateIncome(req.user.id, validatedData.incomes)
+                : [],
+            
+            // Process savings goals
+            validatedData.savings
+                ? SavingsService.createGoal(req.user.id, validatedData.savings)
+                : null,
+            
+            // Process expenses
+            validatedData.expenses?.length > 0
+                ? ExpenseService.bulkCreateExpenses(req.user.id, validatedData.expenses)
+                : []
+        ]);
+
+        // Get financial health assessment after setup
+        const healthAssessment = await FinancialHealthService.getFinancialHealth(req.user.id);
+
+        res.json({
+            status: 'success',
+            data: {
+                accounts,
+                cards,
+                income,
+                savings,
+                expenses,
+                healthAssessment
+            }
+        });
+    } catch (error) {
+        LoggingService.logError(error, { 
+            context: 'Financial setup',
+            userId: req.user.id 
+        });
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Validation failed',
+                errors: error.message.split(', ').map(msg => ({
+                    message: msg
+                }))
+            });
+        }
+        next(error);
+    }
+});
+
+// Credit Card Routes
+router.get('/cards', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const cards = await CreditCardService.getUserCards(req.user.id);
+        res.json({ status: 'success', data: cards });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get credit cards' });
+        next(error);
+    }
+});
+
+router.post('/cards', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const validatedData = await ValidationService.validate('creditCard', req.body);
+        const card = await CreditCardService.addCard(req.user.id, validatedData);
+        res.json({ status: 'success', data: card });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Add credit card' });
+        next(error);
+    }
+});
+
+router.put('/cards/:id', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const validatedData = await ValidationService.validate('creditCard', req.body);
+        const card = await CreditCardService.updateCard(req.params.id, req.user.id, validatedData);
+        res.json({ status: 'success', data: card });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Update credit card' });
+        next(error);
+    }
+});
+
+router.delete('/cards/:id', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        await CreditCardService.deleteCard(req.params.id, req.user.id);
+        res.json({ status: 'success', message: 'Credit card deleted successfully' });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Delete credit card' });
+        next(error);
+    }
+});
+
+// Income Routes
+router.get('/income', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const income = await IncomeService.getUserIncome(req.user.id, req.query);
+        res.json({ status: 'success', data: income });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get income' });
+        next(error);
+    }
+});
+
+router.post('/income', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const validatedData = await ValidationService.validate('income', req.body);
+        const income = await IncomeService.addIncome(req.user.id, validatedData);
+        res.json({ status: 'success', data: income });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Add income' });
+        next(error);
+    }
+});
+
+router.get('/income/summary', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const summary = await IncomeService.getIncomeSummary(req.user.id, req.query.period);
+        res.json({ status: 'success', data: summary });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get income summary' });
+        next(error);
+    }
+});
+
+router.get('/income/projection', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const projection = await IncomeService.getProjectedIncome(req.user.id, req.query.months);
+        res.json({ status: 'success', data: projection });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get income projection' });
+        next(error);
+    }
+});
+
+// Savings Routes
+router.get('/savings/goals', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const goals = await SavingsService.getUserGoals(req.user.id);
+        res.json({ status: 'success', data: goals });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get savings goals' });
+        next(error);
+    }
+});
+
+router.post('/savings/goals', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const validatedData = await ValidationService.validate('savingsGoal', req.body);
+        const goal = await SavingsService.createGoal(req.user.id, validatedData);
+        res.json({ status: 'success', data: goal });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Create savings goal' });
+        next(error);
+    }
+});
+
+router.post('/savings/goals/:id/progress', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const { amount } = await ValidationService.validate('savingsProgress', req.body);
+        const progress = await SavingsService.updateProgress(req.params.id, req.user.id, amount);
+        res.json({ status: 'success', data: progress });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Update savings progress' });
+        next(error);
+    }
+});
+
+router.get('/savings/analytics', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const analytics = await SavingsService.getAnalytics(req.user.id);
+        res.json({ status: 'success', data: analytics });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get savings analytics' });
+        next(error);
+    }
+});
+
+// Financial Health Routes
+router.get('/health', auth.isAuthenticated, async (req, res, next) => {
+    try {
+        const health = await FinancialHealthService.getFinancialHealth(req.user.id);
+        res.json({ status: 'success', data: health });
+    } catch (error) {
+        LoggingService.logError(error, { context: 'Get financial health' });
         next(error);
     }
 });
