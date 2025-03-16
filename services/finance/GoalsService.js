@@ -25,14 +25,28 @@ class GoalsService {
 
     async createFinancialGoal(userId, data) {
         try {
+            const FinancialGoal = sequelize.models.FinancialGoal;
+            if (!FinancialGoal) {
+                throw new Error('FinancialGoal model not found');
+            }
+
             const goal = await FinancialGoal.create({
-                userId,
-                ...data,
-                currentAmount: data.currentAmount || 0
+                user_id: userId,
+                name: data.name,
+                target_amount: data.targetAmount,
+                current_amount: data.currentAmount || 0,
+                target_date: data.targetDate,
+                category: data.category || 'general',
+                priority: data.priority || 'medium',
+                status: 'active'
             });
+
             return this.getGoalById(goal.id, userId);
         } catch (error) {
-            FinanceErrorHandler.handleFinancialOperationError(error, 'goal_create');
+            if (error instanceof ValidationError) {
+                throw error;
+            }
+            throw FinanceErrorHandler.handleFinancialOperationError(error, 'goal_create');
         }
     }
 
@@ -69,16 +83,24 @@ class GoalsService {
 
     async getGoalById(id, userId) {
         try {
-            return await FinancialGoal.findOne({
+            const goal = await FinancialGoal.findOne({
                 where: { id, userId },
                 include: [{
                     model: GoalContribution,
-                    as: 'contributions',
-                    attributes: ['id', 'amount', 'date']
+                    as: 'contributions'
                 }]
             });
+
+            if (!goal) {
+                throw new ValidationError('Financial goal not found');
+            }
+
+            return goal;
         } catch (error) {
-            FinanceErrorHandler.handleFinancialOperationError(error, 'goal_get_by_id');
+            if (error instanceof ValidationError) {
+                throw error;
+            }
+            throw FinanceErrorHandler.handleFinancialOperationError(error, 'goal_get_by_id');
         }
     }
 

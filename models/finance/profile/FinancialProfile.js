@@ -41,11 +41,25 @@ FinancialProfile.init({
     },
     monthly_expenses: {
         type: DataTypes.JSON,
-        allowNull: false
+        allowNull: false,
+        defaultValue: {
+            housing: 0,
+            utilities: 0,
+            transportation: 0,
+            groceries: 0,
+            healthcare: 0,
+            entertainment: 0,
+            other: 0
+        }
     },
     investment_profile: {
         type: DataTypes.JSON,
-        allowNull: false
+        allowNull: false,
+        defaultValue: {
+            current_investments: 0,
+            monthly_investment_goal: 0,
+            risk_tolerance: 'medium'
+        }
     },
     last_updated: {
         type: DataTypes.DATE,
@@ -57,7 +71,13 @@ FinancialProfile.init({
     tableName: 'financial_profiles',
     timestamps: true,
     paranoid: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+        {
+            unique: true,
+            fields: ['user_id']
+        }
+    ]
 });
 
 module.exports = FinancialProfile;

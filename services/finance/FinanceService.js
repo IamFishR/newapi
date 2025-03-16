@@ -193,13 +193,24 @@ class FinanceService {
     }
 
     async updateUserFinancialProfile(userId, data) {
-        const [profile] = await FinancialProfile.upsert({
-            user_id: userId,
-            ...data,
-            last_updated: new Date()
-        });
+        try {
+            if (data.monthlyIncome < 0) {
+                throw new ValidationError('Monthly income cannot be negative');
+            }
 
-        return profile;
+            const [profile] = await FinancialProfile.upsert({
+                user_id: userId,
+                ...data,
+                last_updated: new Date()
+            });
+
+            return profile;
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                throw error;
+            }
+            throw FinanceErrorHandler.handleFinancialOperationError(error, 'update_financial_profile');
+        }
     }
 
     async getFinancialProfile(userId) {
@@ -223,10 +234,16 @@ class FinanceService {
 
     async createBudgetCategory(userId, data) {
         try {
+            const BudgetCategory = sequelize.models.BudgetCategory;
+            if (!BudgetCategory) {
+                throw new Error('BudgetCategory model not found');
+            }
+
             const existing = await BudgetCategory.findOne({
                 where: {
                     user_id: userId,
-                    name: data.name
+                    name: data.name,
+                    deleted_at: null
                 }
             });
 
@@ -236,10 +253,15 @@ class FinanceService {
 
             return await BudgetCategory.create({
                 user_id: userId,
-                ...data
+                name: data.name,
+                budgeted_amount: data.budgetedAmount || 0,
+                color: data.color,
+                is_default: data.isDefault || false
             });
         } catch (error) {
-            console.error('Error creating budget category:', error);
+            if (error instanceof ValidationError) {
+                throw error;
+            }
             throw new Error('Failed to create budget category');
         }
     }

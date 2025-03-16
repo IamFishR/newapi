@@ -2,21 +2,22 @@
   "development": {
     "username": "root",
     "password": "",
-    "database": "database_development",
+    "database": "stock_market_app",
     "host": "127.0.0.1",
     "dialect": "mysql"
   },
   "test": {
     "username": "root",
     "password": "",
-    "database": "database_test",
+    "database": "stock_market_app_test",
     "host": "127.0.0.1",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "logging": false
   },
   "production": {
     "username": "root",
     "password": "",
-    "database": "database_production",
+    "database": "stock_market_app_prod",
     "host": "127.0.0.1",
     "dialect": "mysql"
   }
