@@ -189,25 +189,25 @@ router.post('/overview', auth.isAuthenticated, async (req, res, next) => {
 
 // Financial Profile Routes
 // Setup route to handle complete financial setup
-router.post('/setup', auth.isAuthenticated, async (req, res, next) => {
-    try {
-        const validatedData = await ValidationService.validate('financialProfile', req.body);
-        const profile = await FinanceService.setupFinancialProfile(req.user.id, validatedData);
-        res.json({ status: 'success', data: profile });
-    } catch (error) {
-        LoggingService.logError(error, { context: 'Financial setup' });
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Validation failed',
-                errors: error.message.split(', ').map(msg => ({
-                    message: msg
-                }))
-            });
-        }
-        next(error);
-    }
-});
+// router.post('/setup', auth.isAuthenticated, async (req, res, next) => {
+//     try {
+//         const validatedData = await ValidationService.validate('financialProfile', req.body);
+//         const profile = await FinanceService.setupFinancialProfile(req.user.id, validatedData);
+//         res.json({ status: 'success', data: profile });
+//     } catch (error) {
+//         LoggingService.logError(error, { context: 'Financial setup' });
+//         if (error.name === 'ValidationError') {
+//             return res.status(400).json({
+//                 status: 'error',
+//                 message: 'Validation failed',
+//                 errors: error.message.split(', ').map(msg => ({
+//                     message: msg
+//                 }))
+//             });
+//         }
+//         next(error);
+//     }
+// });
 
 router.get('/profile', auth.isAuthenticated, async (req, res, next) => {
     try {
@@ -683,9 +683,7 @@ router.post('/setup', auth.isAuthenticated, async (req, res, next) => {
             return res.status(400).json({
                 status: 'error',
                 message: 'Validation failed',
-                errors: error.message.split(', ').map(msg => ({
-                    message: msg
-                }))
+                errors: error?.details ? error.details : error.message
             });
         }
         next(error);

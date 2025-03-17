@@ -1,156 +1,151 @@
+'use strict';
+
 const Joi = require('joi');
 
 const schemas = {
-    financialProfile: Joi.object({
-        monthlyIncome: Joi.number().min(0).required(),
-        monthlySavingsGoal: Joi.number().min(0).required(),
-        currentSavings: Joi.number().min(0).required(),
-        monthlyExpenses: Joi.object({
-            housing: Joi.number().min(0).required(),
-            utilities: Joi.number().min(0).required(),
-            transportation: Joi.number().min(0).required(),
-            groceries: Joi.number().min(0).required(),
-            healthcare: Joi.number().min(0).required(),
-            entertainment: Joi.number().min(0).required(),
-            other: Joi.number().min(0).required()
-        }).required(),
-        investmentProfile: Joi.object({
-            currentInvestments: Joi.number().min(0).required(),
-            monthlyInvestmentGoal: Joi.number().min(0).required(),
-            riskTolerance: Joi.string().valid('low', 'medium', 'high').required()
-        }).required(),
-        debtProfile: Joi.object({
-            totalDebt: Joi.number().min(0).required(),
-            monthlyDebtPayments: Joi.number().min(0).required()
-        }),
-        assets: Joi.object({
-            cash: Joi.number().min(0),
-            investments: Joi.number().min(0),
-            property: Joi.number().min(0),
-            vehicle: Joi.number().min(0),
-            other: Joi.number().min(0)
-        }),
-        liabilities: Joi.object({
-            mortgage: Joi.number().min(0),
-            carLoan: Joi.number().min(0),
-            creditCards: Joi.number().min(0),
-            studentLoans: Joi.number().min(0),
-            otherLoans: Joi.number().min(0)
-        })
+    creditCard: Joi.object({
+        cardNumber: Joi.string()
+            .length(4)
+            .pattern(/^[0-9]+$/)
+            .required()
+            .messages({
+                'string.length': 'Card number must be exactly 4 digits (last 4 digits)',
+                'string.pattern.base': 'Card number must contain only digits'
+            }),
+        cardName: Joi.string()
+            .max(100)
+            .required(),
+        cardType: Joi.string()
+            .valid('visa', 'mastercard', 'amex', 'discover', 'other')
+            .required(),
+        cardPlan: Joi.string()
+            .max(100)
+            .allow(null, ''),
+        cardLimit: Joi.number()
+            .min(0)
+            .required()
     }),
 
-    budgetCategory: Joi.object({
-        name: Joi.string().max(100).required(),
-        budgetedAmount: Joi.number().min(0).required(),
-        color: Joi.string().pattern(/^#[0-9A-F]{6}$/i),
-        isDefault: Joi.boolean()
-    }),
-
-    transaction: Joi.object({
-        categoryId: Joi.string().uuid().required(),
-        date: Joi.date().required(),
-        description: Joi.string().max(255).required(),
-        amount: Joi.number().positive().required(),
-        type: Joi.string().valid('income', 'expense').required(),
-        recurringType: Joi.string().valid('none', 'daily', 'weekly', 'monthly', 'yearly'),
-        recurringEndDate: Joi.date().when('recurringType', {
-            is: 'none',
-            then: Joi.forbidden(),
-            otherwise: Joi.required()
-        })
-    }),
-
-    debtItem: Joi.object({
-        name: Joi.string().max(100).required(),
-        type: Joi.string().valid('credit_card', 'loan', 'mortgage', 'other').required(),
-        balance: Joi.number().min(0).required(),
-        interestRate: Joi.number().min(0).max(100).required(),
-        minimumPayment: Joi.number().min(0).required(),
-        dueDate: Joi.date().required()
-    }),
-
-    debtPayment: Joi.object({
-        amount: Joi.number().positive().required(),
-        paymentDate: Joi.date().required(),
-        paymentMethod: Joi.string().max(50),
-        notes: Joi.string()
-    }),
-
-    financialGoal: Joi.object({
-        name: Joi.string().max(100).required(),
-        targetAmount: Joi.number().positive().required(),
-        currentAmount: Joi.number().min(0),
-        targetDate: Joi.date().greater('now').required(),
-        category: Joi.string().valid('savings', 'investment', 'property', 'education', 'retirement', 'other').required(),
-        priority: Joi.string().valid('low', 'medium', 'high'),
-        monthlyContribution: Joi.number().min(0),
-        notes: Joi.string()
-    }),
-
-    investment: Joi.object({
-        symbol: Joi.string().max(20).required(),
-        shares: Joi.number().positive().required(),
-        purchasePrice: Joi.number().positive().required(),
-        type: Joi.string().valid('stock', 'etf', 'mutual_fund', 'crypto', 'other').required(),
-        purchaseDate: Joi.date().required(),
-        notes: Joi.string()
-    }),
-
-    investmentTransaction: Joi.object({
-        type: Joi.string().valid('buy', 'sell').required(),
-        shares: Joi.number().positive().required(),
-        pricePerShare: Joi.number().positive().required(),
-        date: Joi.date().required()
-    }),
-
-    asset: Joi.object({
-        name: Joi.string().max(100).required(),
-        category: Joi.string().valid('cash', 'investments', 'property', 'vehicle', 'other').required(),
-        value: Joi.number().min(0).required(),
-        purchaseValue: Joi.number().min(0),
-        purchaseDate: Joi.date(),
+    income: Joi.object({
+        type: Joi.string()
+            .valid('salary', 'business', 'rental', 'interest', 'dividend', 'capital_gains', 'other')
+            .required(),
+        amount: Joi.number()
+            .min(0)
+            .required(),
+        date: Joi.date()
+            .iso()
+            .required(),
+        frequency: Joi.string()
+            .valid('one_time', 'monthly', 'quarterly', 'yearly')
+            .required(),
         description: Joi.string()
+            .max(255)
+            .allow(null, '')
     }),
 
-    liability: Joi.object({
-        name: Joi.string().max(100).required(),
-        category: Joi.string().valid('mortgage', 'loan', 'credit_card', 'other').required(),
-        amount: Joi.number().min(0).required(),
-        interestRate: Joi.number().min(0).max(100).required(),
-        minimumPayment: Joi.number().min(0),
-        paymentDueDate: Joi.number().min(1).max(31),
-        lender: Joi.string().max(100),
-        accountNumber: Joi.string().max(50),
-        notes: Joi.string()
+    savingsGoal: Joi.object({
+        currentAmount: Joi.number()
+            .min(0)
+            .default(0),
+        targetAmount: Joi.number()
+            .min(Joi.ref('currentAmount'))
+            .required()
+            .messages({
+                'number.min': 'Target amount must be greater than current amount'
+            }),
+        targetDate: Joi.date()
+            .iso()
+            .min('now')
+            .required()
+            .messages({
+                'date.min': 'Target date must be in the future'
+            }),
+        monthlyContribution: Joi.number()
+            .min(0)
+            .required(),
+        savingsType: Joi.string()
+            .valid('emergency', 'retirement', 'education', 'house', 'car', 'travel', 'wedding', 'other')
+            .required(),
+        category: Joi.string()
+            .max(50)
+            .required()
     }),
 
-    taxProfile: Joi.object({
-        filingStatus: Joi.string().valid('single', 'married_joint', 'married_separate', 'head_household').required(),
-        estimatedIncome: Joi.number().min(0).required(),
-        estimatedDeductions: Joi.number().min(0),
-        estimatedTaxCredits: Joi.number().min(0),
-        withholdingAmount: Joi.number().min(0)
+    savingsProgress: Joi.object({
+        amount: Joi.number()
+            .required()
+            .messages({
+                'number.base': 'Amount must be a number'
+            })
     }),
 
-    taxDeduction: Joi.object({
-        category: Joi.string().max(100).required(),
-        description: Joi.string().max(255).required(),
-        amount: Joi.number().positive().required(),
-        date: Joi.date().required(),
-        status: Joi.string().valid('verified', 'pending'),
-        documentUrls: Joi.array().items(Joi.string().uri()),
-        notes: Joi.string()
-    }),
+    // Schema for the complete financial setup
+    financialProfile: Joi.object({
+        bankAccounts: Joi.array().items(Joi.object({
+            accountNumber: Joi.string()
+                .length(4)
+                .pattern(/^[0-9]+$/)
+                .required(),
+            accountName: Joi.string()
+                .max(100)
+                .required(),
+            accountType: Joi.string()
+                .valid('checking', 'savings', 'credit_card', 'investment', 'loan', 'other')
+                .required(),
+            branchName: Joi.string()
+                .max(100)
+                .allow(null, ''),
+            ifscCode: Joi.string()
+                .length(11)
+                .allow(null, ''),
+            micrCode: Joi.string()
+                .length(9)
+                .allow(null, ''),
+            currency: Joi.string()
+                .length(3)
+                .default('INR'),
+            isPrimary: Joi.boolean()
+                .default(false),
+            openingBalance: Joi.number()
+                .min(0)
+                .default(0)
+        })),
 
-    // Analytics parameters
-    dateRange: Joi.object({
-        startDate: Joi.date().required(),
-        endDate: Joi.date().min(Joi.ref('startDate')).required()
-    }),
+        creditCards: Joi.array().items(Joi.ref('creditCard')),
 
-    payoffStrategy: Joi.object({
-        strategy: Joi.string().valid('avalanche', 'snowball').required(),
-        additionalPayment: Joi.number().min(0)
+        incomes: Joi.array().items(Joi.ref('income')),
+
+        savings: Joi.ref('savingsGoal'),
+
+        expenses: Joi.array().items(Joi.object({
+            type: Joi.string()
+                .allow(null, ''),
+            amount: Joi.number()
+                .min(0)
+                .required(),
+            date: Joi.date()
+                .iso()
+                .required(),
+            isRecurring: Joi.boolean()
+                .default(false),
+            category: Joi.string()
+                .max(50)
+                .required(),
+            subCategory: Joi.string()
+                .max(50)
+                .allow(null, ''),
+            description: Joi.string()
+                .max(255)
+                .allow(null, ''),
+            frequency: Joi.string()
+                .valid('one_time', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly')
+                .when('isRecurring', {
+                    is: true,
+                    then: Joi.required(),
+                    otherwise: Joi.optional()
+                })
+        }))
     })
 };
 
